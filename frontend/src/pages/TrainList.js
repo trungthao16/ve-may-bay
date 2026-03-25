@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
 function TrainList() {
-  const [trains, setTrains] = useState([]);
+  const [, setTrains] = useState([]);
   const [filteredTrains, setFilteredTrains] = useState([]);
   const [loading, setLoading] = useState(true);
 
