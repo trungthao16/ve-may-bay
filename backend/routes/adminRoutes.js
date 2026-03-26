@@ -1,30 +1,30 @@
-// // const router = require("express").Router();
 
-
-// // const adminController = require("../controllers/adminController");
-// // const { protect } = require("../middleware/authMiddleware");
-// // const { isAdmin } = require("../middleware/roleMiddleware");
-
-// // router.get("/stats", protect, isAdmin, adminController.getStats);
-
-// // module.exports = router;
 
 // const express = require("express");
 // const router = express.Router();
-
 // const { getStats } = require("../controllers/adminController");
-// const authMiddleware = require("../middleware/authMiddleware");
-// const roleMiddleware = require("../middleware/roleMiddleware");
+// const { protect, admin } = require("../middleware/authMiddleware");
 
-// router.get("/stats", authMiddleware, roleMiddleware("admin"), getStats);
+// router.get("/stats", protect, admin, getStats);
 
 // module.exports = router;
 
-const express = require("express");
-const router = express.Router();
-const { getStats } = require("../controllers/adminController");
-const { protect, admin } = require("../middleware/authMiddleware");
+import React from "react";
+import { Navigate } from "react-router-dom";
 
-router.get("/stats", protect, admin, getStats);
+const AdminRoute = ({ children }) => {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
-module.exports = router;
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!user || user.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+export default AdminRoute;

@@ -159,7 +159,7 @@ function AppContent() {
 
         {/* ADMIN */}
         <Route
-          path="/admin"
+          path="/admin/dashboard"
           element={
             <AdminRoute>
               <AdminDashboard />
