@@ -23,6 +23,8 @@ import Support from "./pages/Support";
 import AdminPromotions from "./pages/AdminPromotions";
 import AdminSupport from "./pages/AdminSupport";
 
+import Profile from "./pages/Profile";
+
 function AppContent() {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith("/admin");
@@ -45,6 +47,8 @@ function AppContent() {
 
         <Route path="/promotions" element={<Promotions />} />
         <Route path="/support" element={<Support />} />
+
+        <Route path="/profile" element={<Profile />} />
 
         {/* ADMIN */}
         <Route

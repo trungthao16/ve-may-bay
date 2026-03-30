@@ -113,6 +113,11 @@ function Navbar() {
                 Vé của tôi
               </NavLink>
 
+              {/* 🔥 THÊM DÒNG NÀY */}
+              <NavLink to="/profile" className="rv-login-btn ghost-btn">
+                Cá nhân
+              </NavLink>
+
               {user?.role === "admin" && (
                 <NavLink to="/admin" className="rv-login-btn rv-admin-back-btn">
                   Vào admin

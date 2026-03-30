@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 // đăng ký
 exports.register = async (req, res) => {
@@ -11,10 +12,14 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Email đã tồn tại" });
     }
 
+    // 🔥 mã hóa mật khẩu
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const user = new User({
       name,
       email,
-      password,
+      password: hashedPassword,
       role: role || "user",
     });
 
@@ -22,7 +27,12 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       message: "Đăng ký thành công",
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -39,7 +49,9 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Email không tồn tại" });
     }
 
-    if (user.password !== password) {
+    // 🔥 so sánh password đúng chuẩn
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(400).json({ message: "Sai mật khẩu" });
     }
 
@@ -54,7 +66,12 @@ exports.login = async (req, res) => {
 
     res.json({
       token,
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
