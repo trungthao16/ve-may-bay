@@ -3229,3 +3229,7 @@ body{
     flex-wrap: wrap;
   }
 }
+
+.hero-title{
+  color: #fff7ef;
+}
