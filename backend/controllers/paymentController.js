@@ -168,12 +168,14 @@ exports.vnpayReturn = async (req, res) => {
       ticket.vnpTransactionNo = vnp_TransactionNo || null;
       await ticket.save();
 
-      return res.redirect("http://localhost:3000/mytickets?payment=success");
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      return res.redirect(`${frontendUrl}/mytickets?payment=success`);
     } else {
       ticket.paymentStatus = "failed";
       await ticket.save();
 
-      return res.redirect("http://localhost:3000/mytickets?payment=failed");
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      return res.redirect(`${frontendUrl}/mytickets?payment=failed`);
     }
   } catch (error) {
     console.error("VNPAY RETURN ERROR:", error);
