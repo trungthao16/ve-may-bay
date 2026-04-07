@@ -159,7 +159,7 @@ function AdminTickets() {
                 <thead>
                   <tr>
                     <th>Khách hàng</th>
-                    <th>Mã Vé & Ngày DB</th>
+                    <th>Mã Vé & Ngày Đặt</th>
                     <th>Tàu</th>
                     <th>Tuyến</th>
                     <th>Ghế</th>
@@ -240,9 +240,8 @@ function AdminTickets() {
 
                         <td>
                           <span
-                            className={`admin-badge ${
-                              status === "cancelled" ? "cancelled" : "booked"
-                            }`}
+                            className={`admin-badge ${status === "cancelled" ? "cancelled" : "booked"
+                              }`}
                           >
                             {renderTicketStatus(status)}
                           </span>

@@ -72,7 +72,7 @@ exports.getStats = async (req, res) => {
     const totalTrains = await Train.countDocuments();
     const totalTickets = await Ticket.countDocuments();
 
-    const tickets = await Ticket.find({ status: "booked" }).populate("train");
+    const tickets = await Ticket.find({ status: "booked", paymentStatus: "paid" });
 
     const totalRevenue = tickets.reduce((sum, ticket) => {
       return sum + (ticket.price || 0);
