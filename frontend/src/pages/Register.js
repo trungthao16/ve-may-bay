@@ -10,6 +10,7 @@ function Register() {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -19,13 +20,14 @@ function Register() {
     e.preventDefault();
 
     try {
+      setLoading(true);
       await API.post("/auth/register", form);
-      // alert("Đăng ký thành công! Vui lòng đăng nhập.");
-      // Redirect to OTP verification page instead of login
       navigate(`/verify-otp?email=${encodeURIComponent(form.email)}`);
     } catch (error) {
       console.log(error.response?.data);
       alert(error.response?.data?.message || "Đăng ký thất bại");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,8 +66,8 @@ function Register() {
             onChange={handleChange}
           />
 
-          <button type="submit" className="auth-btn">
-            Đăng ký
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? "Đang xử lý..." : "Đăng ký"}
           </button>
         </form>
 

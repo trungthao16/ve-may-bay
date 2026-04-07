@@ -3,7 +3,9 @@ const nodemailer = require('nodemailer');
 // Tạo transporter LAZILY (bên trong hàm) để đảm bảo process.env đã được load
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // dùng SSL
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
