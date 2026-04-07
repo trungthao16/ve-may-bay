@@ -47,6 +47,12 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi đăng ký:", error);
+    
+    // Xử lý lỗi trùng lặp email từ MongoDB (E11000)
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác." });
+    }
+    
     res.status(500).json({ message: error.message });
   }
 };
