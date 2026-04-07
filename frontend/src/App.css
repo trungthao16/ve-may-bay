@@ -317,6 +317,18 @@ button{
   align-items: end;
 }
 
+.trainlist-search-form{
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.trainlist-search-form .field{
+  flex: 1;
+  min-width: 140px;
+}
+
 .field{
   display: flex;
   flex-direction: column;
@@ -990,6 +1002,42 @@ button{
       transparent 36px
     );
   padding: 40px 16px;
+}
+
+/* =========================
+   PROMO CHIPS (Booking Page)
+========================= */
+.active-promotions-list{
+  margin-top: 12px;
+  margin-bottom: 20px;
+}
+.active-promotions-list p{
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #7b6f65;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.promo-chips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.promo-chip{
+  background: #f8f1e5;
+  border: 1px dashed #d1b897;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: #8c5b24;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.promo-chip:hover{
+  background: #ecdaba;
+}
+.promo-chip strong{
+  color: #b94c36;
 }
 
 .auth-card{

@@ -5,12 +5,34 @@ function Home() {
   const navigate = useNavigate();
 
   const [tripType, setTripType] = useState("oneway");
-  const [from, setFrom] = useState("Hà Nội");
-  const [to, setTo] = useState("TP Hồ Chí Minh");
-  const [date, setDate] = useState("2026-03-15");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [date, setDate] = useState("");
   const [returnDate, setReturnDate] = useState("2026-03-16");
   const [passengers, setPassengers] = useState("1 người lớn");
   const [groupSize, setGroupSize] = useState("");
+
+  const stations = [
+    // Tuyến đường sắt Thống Nhất (Bắc - Nam)
+    "Hà Nội", "TP Hồ Chí Minh", "Phủ Lý", "Nam Định", "Ninh Bình", "Bỉm Sơn", "Thanh Hóa", "Minh Khôi",
+    "Chợ Sy", "Vinh", "Yên Trung", "Hương Phố", "Đồng Lê", "Đồng Hới", "Đông Hà",
+    "Huế", "Lăng Cô", "Đà Nẵng", "Trà Kiệu", "Phú Cang", "Tam Kỳ", "Núi Thành",
+    "Quảng Ngãi", "Đức Phổ", "Bồng Sơn", "Diêu Trì", "Tuy Hòa", "Giã", "Ninh Hòa",
+    "Nha Trang", "Ngã Ba", "Tháp Chàm", "Sông Mao", "Ma Lâm", "Bình Thuận",
+    "Suối Kiết", "Long Khánh", "Biên Hòa", "Dĩ An",
+
+    // Tuyến phía Bắc (Hà Nội - Lào Cai)
+    "Phủ Đức", "Việt Trì", "Vĩnh Yên", "Yên Bái", "Lào Cai",
+
+    // Tuyến phía Bắc (Hà Nội - Lạng Sơn)
+    "Bắc Giang", "Lạng Sơn", "Đồng Đăng",
+
+    // Tuyến phía Đông (Hà Nội - Hải Phòng)
+    "Gia Lâm", "Cẩm Giàng", "Hải Dương", "Phú Thái", "Hải Phòng",
+
+    // Tuyến phía Đông Bắc (Hà Nội - Thái Nguyên - Hạ Long)
+    "Thái Nguyên", "Uông Bí", "Hạ Long"
+  ];
 
   const swapStations = () => {
     const temp = from;
@@ -40,61 +62,82 @@ function Home() {
   // };
 
   const handleSearch = () => {
-  if (!from.trim() || !to.trim()) {
-    alert("Vui lòng nhập ga đi và ga đến");
-    return;
-  }
-
-  if (from.trim().toLowerCase() === to.trim().toLowerCase()) {
-    alert("Ga đi và ga đến không được trùng nhau");
-    return;
-  }
-
-  if (!date) {
-    alert("Vui lòng chọn ngày đi");
-    return;
-  }
-
-  if (tripType === "roundtrip") {
-    if (!returnDate) {
-      alert("Vui lòng chọn ngày về");
+    if (!from.trim() || !to.trim()) {
+      alert("Vui lòng nhập ga đi và ga đến");
       return;
     }
 
-    if (new Date(returnDate) < new Date(date)) {
-      alert("Ngày về phải lớn hơn hoặc bằng ngày đi");
+    if (from.trim().toLowerCase() === to.trim().toLowerCase()) {
+      alert("Ga đi và ga đến không được trùng nhau");
       return;
     }
-  }
 
-  if (tripType === "group") {
-    if (!groupSize.trim()) {
-      alert("Vui lòng nhập số lượng đoàn");
+    if (!date) {
+      alert("Vui lòng chọn ngày đi");
       return;
     }
-  }
 
-  const params = {
-    from,
-    to,
-    date,
-    passengers,
-    tripType,
+    if (tripType === "roundtrip") {
+      if (!returnDate) {
+        alert("Vui lòng chọn ngày về");
+        return;
+      }
+
+      if (new Date(returnDate) < new Date(date)) {
+        alert("Ngày về phải lớn hơn hoặc bằng ngày đi");
+        return;
+      }
+    }
+
+    if (tripType === "group") {
+      if (!groupSize.trim()) {
+        alert("Vui lòng nhập số lượng đoàn");
+        return;
+      }
+    }
+
+    const params = {
+      from,
+      to,
+      date,
+      passengers,
+      tripType,
+    };
+
+    if (tripType === "roundtrip") {
+      params.returnDate = returnDate;
+    }
+
+    if (tripType === "group") {
+      params.groupSize = groupSize;
+    }
+
+    const query = new URLSearchParams(params).toString();
+
+    // đổi đúng route trang danh sách tàu của bạn
+    navigate(`/trains?${query}`);
   };
 
-  if (tripType === "roundtrip") {
-    params.returnDate = returnDate;
-  }
+  const handlePopularRouteClick = (title) => {
+    const parts = title.split("→").map(s => s.trim());
+    if (parts.length === 2) {
+      let f = parts[0];
+      let t = parts[1];
+      if (f === "HCM" || f === "TP. Hồ Chí Minh" || f === "TP. Hồ chí minh") f = "Sài Gòn";
+      if (t === "HCM" || t === "TP. Hồ Chí Minh" || t === "TP. Hồ chí minh") t = "Sài Gòn";
 
-  if (tripType === "group") {
-    params.groupSize = groupSize;
-  }
+      const params = {
+        from: f,
+        to: t,
+        date,
+        passengers,
+        tripType,
+      };
 
-  const query = new URLSearchParams(params).toString();
-
-  // đổi đúng route trang danh sách tàu của bạn
-  navigate(`/trains?${query}`);
-};
+      const query = new URLSearchParams(params).toString();
+      navigate(`/trains?${query}`);
+    }
+  };
 
   const popularRoutes = [
     {
@@ -176,6 +219,10 @@ function Home() {
 
   return (
     <div className="railviet-page">
+      <datalist id="home-station-list">
+        {stations.map((s) => <option key={s} value={s} />)}
+      </datalist>
+
       <section className="hero-section">
         <div className="rv-container">
           <div className="hero-content">
@@ -224,8 +271,10 @@ function Home() {
                   <label>Ga đi</label>
                   <input
                     type="text"
+                    list="home-station-list"
                     value={from}
                     onChange={(e) => setFrom(e.target.value)}
+                    placeholder="Nhập ga đi..."
                   />
                 </div>
 
@@ -242,8 +291,10 @@ function Home() {
                   <label>Ga đến</label>
                   <input
                     type="text"
+                    list="home-station-list"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
+                    placeholder="Nhập ga đến..."
                   />
                 </div>
 
@@ -333,6 +384,8 @@ function Home() {
               <div
                 key={index}
                 className={`${route.className} ${route.large ? "large" : ""}`}
+                onClick={() => handlePopularRouteClick(route.title)}
+                style={{ cursor: "pointer" }}
               >
                 {route.badge && <div className="route-badge">{route.badge}</div>}
                 <div className="route-overlay">

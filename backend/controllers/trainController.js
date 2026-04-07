@@ -90,6 +90,7 @@
 // };
 
 const Train = require("../models/Train");
+const Ticket = require("../models/Ticket");
 
 // lấy danh sách tàu
 exports.getTrains = async (req, res) => {
@@ -161,7 +162,37 @@ exports.searchTrains = async (req, res) => {
   try {
     const { from = "", to = "", date = "", tripType = "", groupSize = "" } = req.query;
 
-    let trains = await Train.find();
+    let trains = await Train.find().lean(); // Use lean to easily add fields
+
+    // Lọc bỏ các chuyến tàu đã qua ngày khởi hành
+    const todayStr = new Date().toISOString().split("T")[0];
+    trains = trains.filter(train => {
+      if (!train.departureDate) return false;
+      const trainDateStr = new Date(train.departureDate).toISOString().split("T")[0];
+      return trainDateStr >= todayStr;
+    });
+
+    // Đếm số ghế đã đặt cho mỗi tàu
+    const bookedCounts = await Ticket.aggregate([
+      { $match: { status: "booked" } },
+      { $group: { _id: "$train", count: { $sum: 1 } } }
+    ]);
+
+    const bookedMap = {};
+    bookedCounts.forEach(b => {
+      bookedMap[b._id.toString()] = b.count;
+    });
+
+    // Thêm trường availableSeats vào dữ liệu tàu
+    trains = trains.map(train => {
+      const booked = bookedMap[train._id.toString()] || 0;
+      const total = train.totalSeats || train.seats || 0;
+      return {
+        ...train,
+        bookedSeats: booked,
+        availableSeats: Math.max(total - booked, 0)
+      };
+    });
 
     if (from) {
       trains = trains.filter((train) =>
@@ -192,8 +223,7 @@ exports.searchTrains = async (req, res) => {
 
       if (!isNaN(groupNumber)) {
         trains = trains.filter((train) => {
-          const totalSeats = train.totalSeats || train.seats || 0;
-          return totalSeats >= groupNumber;
+          return train.availableSeats >= groupNumber;
         });
       }
     }

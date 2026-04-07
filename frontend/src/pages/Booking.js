@@ -139,6 +139,8 @@ function Booking() {
   const [promoError, setPromoError] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedPromotion, setAppliedPromotion] = useState(null);
+  const [activePromotions, setActivePromotions] = useState([]);
+  const [showPromos, setShowPromos] = useState(false);
 
   useEffect(() => {
     const fetchTrain = async () => {
@@ -151,14 +153,26 @@ function Booking() {
       }
     };
 
+    const fetchPromotions = async () => {
+      try {
+        const res = await API.get("/promotions");
+        setActivePromotions(res.data);
+      } catch (error) {
+        console.error("Lỗi lấy khuyến mãi:", error);
+      }
+    };
+
     fetchTrain();
+    fetchPromotions();
   }, [id]);
 
   const originalPrice = train ? Number(train.price) : 0;
   const finalPrice = Math.max(originalPrice - discountAmount, 0);
 
-  const handleApplyPromotion = async () => {
-    if (!promoCode.trim()) {
+  const handleApplyPromotion = async (codeToApply = null) => {
+    const code = typeof codeToApply === "string" ? codeToApply : promoCode;
+
+    if (!code.trim()) {
       setPromoMessage("");
       setPromoError("Vui lòng nhập mã khuyến mãi");
       setDiscountAmount(0);
@@ -172,7 +186,7 @@ function Booking() {
       setPromoError("");
 
       const res = await API.post("/promotions/validate", {
-        code: promoCode,
+        code: code,
         orderValue: originalPrice,
       });
 
@@ -233,7 +247,7 @@ function Booking() {
       <div className="rv-container">
         <div className="booking-card">
           <div className="booking-left">
-            <h1 className="booking-title">{train.name}</h1>
+            <h1 className="booking-title">{train.trainName || "Chuyến tàu"}</h1>
             <div className="booking-route">
               {train.from} → {train.to}
             </div>
@@ -256,7 +270,7 @@ function Booking() {
 
               <div className="info-item">
                 <span>Tổng ghế</span>
-                <strong>{train.seats}</strong>
+                <strong>{train.totalSeats}</strong>
               </div>
             </div>
           </div>
@@ -290,6 +304,96 @@ function Booking() {
                   {promoLoading ? "Đang áp mã..." : "Áp mã"}
                 </button>
               </div>
+
+              {activePromotions.length > 0 && (
+                <div className="active-promotions-list">
+                  <p 
+                    onClick={() => setShowPromos(!showPromos)}
+                    style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    Xem mã có thể áp dụng 
+                    <span style={{ fontSize: '10px' }}>{showPromos ? '▲' : '▼'}</span>
+                  </p>
+                  
+                  {showPromos && (
+                    <div className="promo-chips" style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      flexWrap: 'nowrap',
+                      gap: '10px',
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      padding: '4px',
+                      marginTop: '8px'
+                    }}>
+                      {activePromotions.map((promo) => {
+                        const isPercent = promo.discountType === 'percent';
+                        const valText = isPercent 
+                          ? `Giảm ${promo.discountValue}%` 
+                          : `Giảm ${(promo.discountValue / 1000).toLocaleString('vi-VN')}k`;
+                        const maxText = isPercent && promo.maxDiscount > 0 
+                          ? ` tối đa ${(promo.maxDiscount / 1000).toLocaleString('vi-VN')}k` 
+                          : '';
+                        const minText = promo.minOrderValue > 0 
+                          ? `Đơn tối thiểu ${(promo.minOrderValue / 1000).toLocaleString('vi-VN')}k` 
+                          : 'Mọi đơn hàng';
+                          
+                        const isApplied = appliedPromotion && appliedPromotion.code === promo.code;
+                          
+                        return (
+                          <div 
+                            key={promo._id} 
+                            className="promo-chip-shopee"
+                            onClick={() => {
+                               if (!isApplied) {
+                                 setPromoCode(promo.code);
+                                 handleApplyPromotion(promo.code);
+                                 setShowPromos(false);
+                               }
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              background: isApplied ? '#f0f9f0' : '#fffdf9',
+                              border: `1px solid ${isApplied ? '#28a745' : '#eadfce'}`,
+                              borderRadius: '10px',
+                              padding: '12px',
+                              cursor: isApplied ? 'default' : 'pointer',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
+                              transition: '0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isApplied) e.currentTarget.style.borderColor = '#c9503a';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isApplied) e.currentTarget.style.borderColor = '#eadfce';
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <strong style={{ color: isApplied ? '#28a745' : '#c9503a', fontSize: '15px' }}>{valText}{maxText}</strong>
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#6b6156' }}>{minText}</div>
+                            </div>
+                            <div style={{ 
+                              background: isApplied ? '#e1f5e6' : '#ffece8', 
+                              color: isApplied ? '#28a745' : '#b64431', 
+                              padding: '6px 12px', 
+                              borderRadius: '8px', 
+                              fontSize: '12px', 
+                              fontWeight: '700' 
+                            }}>
+                              {isApplied ? '✔ Đang dùng' : 'Dùng ngay'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {promoMessage && (
                 <div className="promo-success">{promoMessage}</div>
