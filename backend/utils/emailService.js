@@ -2,16 +2,26 @@ const nodemailer = require('nodemailer');
 
 // Tạo transporter LAZILY (bên trong hàm) để đảm bảo process.env đã được load
 const createTransporter = () => {
+  // Xóa khoảng trắng trong mật khẩu App Google (đề phòng lỗi env var)
+  const emailPass = (process.env.EMAIL_PASS || '').replace(/\s/g, '');
+  const emailUser = (process.env.EMAIL_USER || '').trim();
+
+  console.log(`📧 Email config: user=${emailUser}, pass_length=${emailPass.length}`);
+
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // dùng SSL
+    port: 587,
+    secure: false, // dùng STARTTLS (port 587)
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
+      user: emailUser,
+      pass: emailPass
+    },
+    tls: {
+      rejectUnauthorized: false // bỏ qua lỗi certificate trên cloud
     }
   });
 };
+
 
 exports.sendOTPVerificationEmail = async (email, otpCode) => {
   const transporter = createTransporter();
