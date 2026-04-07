@@ -117,13 +117,14 @@ exports.createTicket = async (req, res) => {
     const {
       trainId,
       seatNumber,
+      coachNumber,
       promotionCode,
       discountAmount = 0,
       finalPrice,
     } = req.body;
 
-    if (!trainId || !seatNumber) {
-      return res.status(400).json({ message: "Thiếu trainId hoặc seatNumber" });
+    if (!trainId || !seatNumber || !coachNumber) {
+      return res.status(400).json({ message: "Thiếu thông tin: trainId, seatNumber hoặc coachNumber" });
     }
 
     const train = await Train.findById(trainId);
@@ -131,9 +132,11 @@ exports.createTicket = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy chuyến tàu" });
     }
 
+    // Kiểm tra ghế đã được đặt chưa (theo cả toa + số ghế)
     const existingTicket = await Ticket.findOne({
       train: trainId,
-      seatNumber,
+      coachNumber: Number(coachNumber),
+      seatNumber: seatNumber.toString(),
       status: "booked",
     });
 
@@ -141,9 +144,18 @@ exports.createTicket = async (req, res) => {
       return res.status(400).json({ message: "Ghế này đã được đặt" });
     }
 
+    // Tính giá dựa theo loại toa (nếu tàu có toa)
+    let basePrice = Number(train.price);
+    if (train.coaches && train.coaches.length > 0) {
+      const coach = train.coaches.find(c => c.coachNumber === Number(coachNumber));
+      if (coach && coach.priceMultiplier && coach.priceMultiplier !== 1) {
+        basePrice = Math.round(basePrice * coach.priceMultiplier);
+      }
+    }
+
     let validPromotionCode = null;
     let validDiscountAmount = 0;
-    let finalTicketPrice = Number(train.price);
+    let finalTicketPrice = basePrice;
 
     if (promotionCode) {
       const promotion = await Promotion.findOne({
@@ -186,9 +198,10 @@ exports.createTicket = async (req, res) => {
     const ticket = await Ticket.create({
       user: req.user.id,
       train: trainId,
-      seatNumber,
+      seatNumber: seatNumber.toString(),
+      coachNumber: Number(coachNumber),
       price: finalTicketPrice,
-      originalPrice: Number(train.price),
+      originalPrice: basePrice,
       promotionCode: validPromotionCode,
       discountAmount: validDiscountAmount,
       status: "booked",

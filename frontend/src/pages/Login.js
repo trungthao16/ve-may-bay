@@ -34,7 +34,12 @@ function Login() {
       window.location.reload();
     } catch (error) {
       console.log(error);
-      alert(error.response?.data?.message || "Email hoặc mật khẩu không đúng.");
+      if (error.response?.data?.notVerified) {
+        alert("Tài khoản chưa được xác thực. Đang chuyển hướng...");
+        navigate(`/verify-otp?email=${encodeURIComponent(error.response.data.email || form.email)}`);
+      } else {
+        alert(error.response?.data?.message || "Email hoặc mật khẩu không đúng.");
+      }
     }
   };
 
@@ -71,6 +76,9 @@ function Login() {
           </button>
         </form>
 
+        <p className="auth-footer">
+          Quên mật khẩu? <Link to="/forgot-password">Lấy lại mật khẩu</Link>
+        </p>
         <p className="auth-footer">
           Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
         </p>

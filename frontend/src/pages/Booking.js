@@ -124,6 +124,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import SeatMap from "../components/SeatMap";
 
 function Booking() {
   const { id } = useParams();
@@ -131,6 +132,8 @@ function Booking() {
 
   const [train, setTrain] = useState(null);
   const [seatNumber, setSeatNumber] = useState("");
+  const [coachNumber, setCoachNumber] = useState(null);
+  const [extraPrice, setExtraPrice] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const [promoCode, setPromoCode] = useState("");
@@ -166,8 +169,16 @@ function Booking() {
     fetchPromotions();
   }, [id]);
 
-  const originalPrice = train ? Number(train.price) : 0;
+  const originalPrice = train ? Number(train.price) + extraPrice : 0;
   const finalPrice = Math.max(originalPrice - discountAmount, 0);
+
+  const handleSeatSelect = (cNumber, sNumber, addedPrice) => {
+    setCoachNumber(cNumber);
+    setSeatNumber(sNumber);
+    setExtraPrice(addedPrice);
+    setDiscountAmount(0); // reset discount when price changes
+    setAppliedPromotion(null);
+  };
 
   const handleApplyPromotion = async (codeToApply = null) => {
     const code = typeof codeToApply === "string" ? codeToApply : promoCode;
@@ -207,8 +218,8 @@ function Booking() {
   const handleBooking = async (e) => {
     e.preventDefault();
 
-    if (!seatNumber) {
-      alert("Vui lòng nhập số ghế");
+    if (!seatNumber || !coachNumber) {
+      alert("Vui lòng chọn ghế trên sơ đồ");
       return;
     }
 
@@ -217,7 +228,8 @@ function Booking() {
 
       const payload = {
         trainId: id,
-        seatNumber: seatNumber,
+        seatNumber: seatNumber.toString(),
+        coachNumber: coachNumber,
         promotionCode: appliedPromotion?.code || "",
         discountAmount: discountAmount,
         finalPrice: finalPrice,
@@ -278,14 +290,27 @@ function Booking() {
           <div className="booking-right">
             <h3>Thông tin đặt vé</h3>
 
+            <div style={{ marginBottom: "20px" }}>
+              <SeatMap train={train} onSeatSelect={handleSeatSelect} />
+            </div>
+
             <form onSubmit={handleBooking}>
-              <label>Số ghế</label>
-              <input
-                type="text"
-                value={seatNumber}
-                onChange={(e) => setSeatNumber(e.target.value)}
-                placeholder="Ví dụ: 12"
-              />
+              <label>Ghế đã chọn</label>
+              <div 
+                style={{ 
+                  padding: "12px", 
+                  background: "#eaf5ef", 
+                  border: "1px solid #4ca37d", 
+                  borderRadius: "8px", 
+                  fontWeight: "bold", 
+                  color: "#2a6948",
+                  marginBottom: "20px" 
+                }}
+              >
+                {coachNumber && seatNumber 
+                  ? `Toa số ${coachNumber} - Ghế số ${seatNumber}` 
+                  : "Chưa chọn ghế (Vui lòng click vào sơ đồ)"}
+              </div>
 
               <label>Mã khuyến mãi</label>
               <div className="promo-box">

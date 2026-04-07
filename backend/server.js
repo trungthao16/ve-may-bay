@@ -48,6 +48,7 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+dotenv.config();
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
@@ -58,8 +59,6 @@ const userRoutes = require("./routes/userRoutes");
 const promotionRoutes = require("./routes/promotionRoutes");
 const supportRoutes = require("./routes/supportRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
-
-dotenv.config();
 
 const app = express();
 

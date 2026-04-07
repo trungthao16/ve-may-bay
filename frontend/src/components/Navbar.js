@@ -43,7 +43,7 @@ function Navbar() {
           </NavLink>
 
           <NavLink to="/trains" className={activeClass}>
-            Danh sách vé
+            Danh sách tàu
           </NavLink>
 
           <NavLink to="/promotions" className={activeClass}>

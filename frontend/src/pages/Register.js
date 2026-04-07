@@ -20,12 +20,13 @@ function Register() {
 
     try {
       await API.post("/auth/register", form);
-      alert("Đăng ký thành công! Vui lòng đăng nhập.");
-      navigate("/login");
+      // alert("Đăng ký thành công! Vui lòng đăng nhập.");
+      // Redirect to OTP verification page instead of login
+      navigate(`/verify-otp?email=${encodeURIComponent(form.email)}`);
     } catch (error) {
-  console.log(error.response?.data);
-  alert(error.response?.data?.message || "Đăng ký thất bại");
-}
+      console.log(error.response?.data);
+      alert(error.response?.data?.message || "Đăng ký thất bại");
+    }
   };
 
   return (

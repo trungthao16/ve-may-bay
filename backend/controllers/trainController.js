@@ -124,7 +124,21 @@ exports.getTrainById = async (req, res) => {
 // tạo tàu
 exports.createTrain = async (req, res) => {
   try {
-    const train = new Train(req.body);
+    const trainData = { ...req.body };
+    
+    // Auto-generate coaches if not provided
+    if (!trainData.coaches || trainData.coaches.length === 0) {
+      trainData.coaches = [
+        { coachNumber: 1, coachType: "soft_seat", capacity: 64, priceMultiplier: 1 },
+        { coachNumber: 2, coachType: "soft_seat", capacity: 64, priceMultiplier: 1 },
+        { coachNumber: 3, coachType: "soft_seat", capacity: 64, priceMultiplier: 1 },
+        { coachNumber: 4, coachType: "sleeper", capacity: 28, priceMultiplier: 1.5 },
+        { coachNumber: 5, coachType: "sleeper", capacity: 28, priceMultiplier: 1.5 },
+      ];
+      trainData.totalSeats = trainData.coaches.reduce((acc, coach) => acc + coach.capacity, 0);
+    }
+
+    const train = new Train(trainData);
     await train.save();
     res.json(train);
   } catch (err) {
@@ -231,5 +245,23 @@ exports.searchTrains = async (req, res) => {
     res.json(trains);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// Lấy danh sách ghế đã đặt của một tàu
+exports.getBookedSeats = async (req, res) => {
+  try {
+    const { trainId } = req.params;
+    
+    // Tìm tất cả các vé đã đặt hoặc đã thanh toán của chuyến tàu này
+    const tickets = await Ticket.find({
+      train: trainId,
+      status: "booked"
+    }).select("coachNumber seatNumber paymentStatus");
+
+    res.json(tickets);
+  } catch (error) {
+    console.error("Lỗi lấy danh sách ghế đã đặt:", error);
+    res.status(500).json({ message: "Có lỗi xảy ra khi lấy dữ liệu ghế" });
   }
 };

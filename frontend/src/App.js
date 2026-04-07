@@ -8,6 +8,8 @@ import AdminRoute from "./components/AdminRoute";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyOTP from "./pages/VerifyOTP";
+import ForgotPassword from "./pages/ForgotPassword";
 import TrainList from "./pages/TrainList";
 import MyTickets from "./pages/MyTickets";
 import Booking from "./pages/Booking";
@@ -38,6 +40,8 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/trains" element={<TrainList />} />
         <Route path="/booking/:id" element={<Booking />} />
 
