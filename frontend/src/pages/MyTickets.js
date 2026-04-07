@@ -118,6 +118,15 @@ function MyTickets() {
               <h3>{ticket.train?.name || ticket.train?.trainName || "Chuyến tàu"}</h3>
 
               <p>
+                <strong>Mã vé:</strong> <span style={{ fontWeight: "bold", color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</span>
+              </p>
+
+              <p>
+                <strong>Ngày đặt:</strong>{" "}
+                {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString("vi-VN") : "Chưa có"}
+              </p>
+
+              <p>
                 <strong>Tuyến:</strong> {ticket.train?.from} → {ticket.train?.to}
               </p>
 
@@ -136,10 +145,35 @@ function MyTickets() {
                 <strong>Khởi hành:</strong> {ticket.train?.departureTime || "Chưa có"}
               </p>
 
-              <p>
-                <strong>Giá:</strong>{" "}
-                {(ticket.price || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
-              </p>
+              {ticket.discountAmount > 0 ? (
+                <div style={{ marginBottom: "10px", padding: "8px", backgroundColor: "#f9f9f9", borderRadius: "8px", border: "1px dashed #ccc" }}>
+                  <p style={{ margin: "4px 0" }}>
+                    <strong>Giá gốc:</strong>{" "}
+                    <span style={{ textDecoration: "line-through", color: "#888" }}>
+                      {(ticket.originalPrice || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
+                    </span>
+                  </p>
+                  <p style={{ margin: "4px 0", color: "#28a745" }}>
+                    <strong>Giảm giá:</strong> -{(ticket.discountAmount).toLocaleString("vi-VN")}đ
+                    {ticket.promotionCode && (
+                      <span style={{ backgroundColor: "#28a745", color: "white", padding: "2px 6px", borderRadius: "10px", fontSize: "11px", marginLeft: "6px" }}>
+                        {ticket.promotionCode}
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ margin: "4px 0" }}>
+                    <strong>Thành tiền:</strong>{" "}
+                    <span style={{ color: "#d9534f", fontWeight: "bold", fontSize: "1.1em" }}>
+                      {(ticket.price || 0).toLocaleString("vi-VN")}đ
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <p>
+                  <strong>Giá:</strong>{" "}
+                  {(ticket.price || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
+                </p>
+              )}
 
               <p>
                 <strong>Thanh toán:</strong> {renderPaymentText(ticket)}
@@ -153,6 +187,12 @@ function MyTickets() {
                 <p>
                   <strong>Thời gian thanh toán:</strong>{" "}
                   {new Date(ticket.paidAt).toLocaleString("vi-VN")}
+                </p>
+              )}
+
+              {ticket.vnpTxnRef && (
+                <p>
+                  <strong>Mã GD VNPay:</strong> {ticket.vnpTxnRef}
                 </p>
               )}
 

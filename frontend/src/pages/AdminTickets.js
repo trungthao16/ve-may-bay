@@ -76,7 +76,7 @@ function AdminTickets() {
   // chỉ tính doanh thu từ vé đã thanh toán
   const totalRevenue = tickets
     .filter((t) => t.paymentStatus === "paid")
-    .reduce((sum, t) => sum + (t.train?.price || t.price || 0), 0);
+    .reduce((sum, t) => sum + (t.price ?? t.train?.price ?? 0), 0);
 
   const renderTicketStatus = (status) => {
     if (status === "cancelled") return "Đã hủy";
@@ -159,14 +159,14 @@ function AdminTickets() {
                 <thead>
                   <tr>
                     <th>Khách hàng</th>
+                    <th>Mã Vé & Ngày DB</th>
                     <th>Tàu</th>
                     <th>Tuyến</th>
                     <th>Ghế</th>
-                    <th>Giá</th>
+                    <th>Giá (VND)</th>
                     <th>Trạng thái vé</th>
                     <th>Thanh toán</th>
                     <th>Phương thức</th>
-                    <th>Thời gian thanh toán</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -178,7 +178,8 @@ function AdminTickets() {
                       ticket.train?.name || ticket.train?.trainName || "Chưa có";
                     const from = ticket.train?.from || ticket.from || "N/A";
                     const to = ticket.train?.to || ticket.to || "N/A";
-                    const price = ticket.train?.price || ticket.price || 0;
+                    const price = ticket.price ?? ticket.train?.price ?? 0;
+                    const originalPrice = ticket.originalPrice ?? ticket.train?.price ?? 0;
                     const status = ticket.status || "booked";
                     const paymentStatus = ticket.paymentStatus || "unpaid";
                     const paymentMethod = ticket.paymentMethod || "vnpay";
@@ -197,6 +198,15 @@ function AdminTickets() {
                           </div>
                         </td>
 
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column" }}>
+                            <strong style={{ color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</strong>
+                            <span style={{ fontSize: "12px", color: "#666" }}>
+                              {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString("vi-VN") : "N/A"}
+                            </span>
+                          </div>
+                        </td>
+
                         <td>{trainName}</td>
 
                         <td>
@@ -204,14 +214,28 @@ function AdminTickets() {
                             <strong>
                               {from} → {to}
                             </strong>
-                            <span>Hành trình vé tàu</span>
+                            <span>Hành trình vé</span>
                           </div>
                         </td>
 
                         <td>{ticket.seatNumber || "—"}</td>
 
-                        <td className="admin-price">
-                          {Number(price).toLocaleString("vi-VN")} VNĐ
+                        <td>
+                          {ticket.discountAmount > 0 ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                              <span style={{ textDecoration: "line-through", color: "#888", fontSize: "12px" }}>
+                                {Number(originalPrice).toLocaleString("vi-VN")}
+                              </span>
+                              <strong className="admin-price" style={{ margin: 0, padding: 0 }}>
+                                {Number(price).toLocaleString("vi-VN")}
+                              </strong>
+                              <span style={{ backgroundColor: "#28a745", color: "white", padding: "2px 4px", borderRadius: "4px", fontSize: "10px", width: "fit-content" }}>
+                                Khuyến mãi: -{Number(ticket.discountAmount).toLocaleString("vi-VN")}
+                              </span>
+                            </div>
+                          ) : (
+                            <strong className="admin-price">{Number(price).toLocaleString("vi-VN")}</strong>
+                          )}
                         </td>
 
                         <td>
@@ -225,22 +249,29 @@ function AdminTickets() {
                         </td>
 
                         <td>
-                          <span
-                            className={`admin-badge payment ${getPaymentBadgeClass(
-                              paymentStatus
-                            )}`}
-                          >
-                            {renderPaymentStatus(paymentStatus)}
-                          </span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <span
+                              className={`admin-badge payment ${getPaymentBadgeClass(
+                                paymentStatus
+                              )}`}
+                              style={{ width: "fit-content" }}
+                            >
+                              {renderPaymentStatus(paymentStatus)}
+                            </span>
+                            {ticket.paidAt && (
+                              <span style={{ fontSize: "11px", color: "#555" }}>
+                                HD: {new Date(ticket.paidAt).toLocaleDateString("vi-VN")}
+                              </span>
+                            )}
+                            {ticket.vnpTxnRef && paymentStatus === "paid" && (
+                              <span style={{ fontSize: "11px", color: "#666", wordBreak: "break-all" }}>
+                                Mã GD: {ticket.vnpTxnRef}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         <td>{paymentMethod}</td>
-
-                        <td>
-                          {ticket.paidAt
-                            ? new Date(ticket.paidAt).toLocaleString("vi-VN")
-                            : "Chưa thanh toán"}
-                        </td>
 
                         <td>
                           <div className="admin-actions">
