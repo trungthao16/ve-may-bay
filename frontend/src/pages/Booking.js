@@ -495,7 +495,7 @@ function Booking() {
               <div className="booking-price-box">
                 <div className="price-row">
                   <span>Giá gốc:</span>
-                  <strong>{originalPrice.toLocaleString("vi-VN")}đ</strong>
+                  <strong>{basePrice.toLocaleString("vi-VN")}đ</strong>
                 </div>
 
                 <div className="price-row">
