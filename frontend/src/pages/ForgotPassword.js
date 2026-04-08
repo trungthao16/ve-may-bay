@@ -2,47 +2,46 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
-// Bước 1: Nhập email 
-// Bước 2: Nhập OTP gửi về mail
-// Bước 3: Đổi mật khẩu
+// Bước 1: Nhập email → Xác nhận tồn tại
+// Bước 2: Nhập mật khẩu mới (không cần OTP)
+// Bước 3: Thành công
 function ForgotPassword() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
-  const [otpCode, setOtpCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const handleSendEmail = async (e) => {
+  // Bước 1: Kiểm tra email có tồn tại không
+  const handleCheckEmail = async (e) => {
     e.preventDefault();
     if (!email) { setError("Vui lòng nhập email"); return; }
     try {
-      setLoading(true); setError(""); setMessage("");
-      const res = await API.post("/auth/forgot-password", { email });
-      setMessage(res.data.message);
+      setLoading(true); setError("");
+      await API.post("/auth/forgot-password", { email });
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || "Lỗi gửi email");
+      setError(err.response?.data?.message || "Không tìm thấy email trong hệ thống.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Bước 2: Đặt mật khẩu mới
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!otpCode || !newPassword || !confirmPassword) { setError("Vui lòng điền đủ thông tin"); return; }
+    if (!newPassword || !confirmPassword) { setError("Vui lòng điền đầy đủ thông tin"); return; }
     if (newPassword !== confirmPassword) { setError("Mật khẩu xác nhận không khớp"); return; }
     if (newPassword.length < 6) { setError("Mật khẩu phải có ít nhất 6 ký tự"); return; }
 
     try {
-      setLoading(true); setError(""); setMessage("");
-      await API.post("/auth/reset-password", { email, otpCode, newPassword });
+      setLoading(true); setError("");
+      await API.post("/auth/reset-password", { email, newPassword });
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.message || "Đặt lại mật khẩu thất bại");
+      setError(err.response?.data?.message || "Đặt lại mật khẩu thất bại.");
     } finally {
       setLoading(false);
     }
@@ -51,15 +50,17 @@ function ForgotPassword() {
   return (
     <div className="auth-page">
       <div className="auth-card">
+
+        {/* Bước 1: Nhập email */}
         {step === 1 && (
           <>
             <p className="section-label">Hỗ trợ tài khoản</p>
             <h1>Quên Mật Khẩu</h1>
-            <p className="auth-sub">Nhập email đã đăng ký để nhận mã OTP.</p>
+            <p className="auth-sub">Nhập email đã đăng ký để tiếp tục đặt lại mật khẩu.</p>
 
             {error && <div style={styles.error}>{error}</div>}
 
-            <form onSubmit={handleSendEmail} className="auth-form">
+            <form onSubmit={handleCheckEmail} className="auth-form">
               <label>Địa chỉ Email</label>
               <input
                 type="email"
@@ -69,7 +70,7 @@ function ForgotPassword() {
                 required
               />
               <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? "Đang gửi..." : "Gửi Mã OTP"}
+                {loading ? "Đang kiểm tra..." : "Tiếp tục"}
               </button>
             </form>
             <p className="auth-footer">
@@ -78,26 +79,16 @@ function ForgotPassword() {
           </>
         )}
 
+        {/* Bước 2: Nhập mật khẩu mới */}
         {step === 2 && (
           <>
-            <p className="section-label">Xác minh danh tính</p>
-            <h1>Đặt Lại Mật Khẩu</h1>
-            <p className="auth-sub">Nhập mã OTP đã gửi đến <strong>{email}</strong></p>
+            <p className="section-label">Đặt lại mật khẩu</p>
+            <h1>Mật Khẩu Mới</h1>
+            <p className="auth-sub">Đặt mật khẩu mới cho tài khoản <strong>{email}</strong></p>
 
-            {message && <div style={styles.success}>{message}</div>}
             {error && <div style={styles.error}>{error}</div>}
 
             <form onSubmit={handleResetPassword} className="auth-form">
-              <label>Mã OTP</label>
-              <input
-                type="text"
-                placeholder="VD: 123456"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                maxLength="6"
-                required
-              />
-
               <label>Mật khẩu mới</label>
               <input
                 type="password"
@@ -117,16 +108,17 @@ function ForgotPassword() {
               />
 
               <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? "Đang cập nhật..." : "Đổi Mật Khẩu"}
+                {loading ? "Đang cập nhật..." : "Đặt Lại Mật Khẩu"}
               </button>
             </form>
 
             <p className="auth-footer">
-              <button onClick={() => setStep(1)} style={styles.linkBtn}>← Quay lại đổi email</button>
+              <button onClick={() => setStep(1)} style={styles.linkBtn}>← Quay lại</button>
             </p>
           </>
         )}
 
+        {/* Bước 3: Thành công */}
         {step === 3 && (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <div style={{ fontSize: "60px", marginBottom: "16px" }}>✅</div>
@@ -149,15 +141,6 @@ const styles = {
     backgroundColor: "#fef2f2",
     color: "#b91c1c",
     border: "1px solid #fecaca",
-    borderRadius: "10px",
-    marginBottom: "16px",
-    fontSize: "14px"
-  },
-  success: {
-    padding: "12px 16px",
-    backgroundColor: "#ecfdf5",
-    color: "#047857",
-    border: "1px solid #a7f3d0",
     borderRadius: "10px",
     marginBottom: "16px",
     fontSize: "14px"
