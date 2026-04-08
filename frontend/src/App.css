@@ -3590,6 +3590,7 @@ body{
     background-color: #000 !important;
     color: #fff !important;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   /* Hide the close/print buttons */
