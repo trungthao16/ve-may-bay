@@ -2734,7 +2734,7 @@ button{
   transition: 0.15s;
 }
 
-.seat-item:hover:not(.booked) {
+.seat-item:hover:not(.booked):not(.locked) {
   border-color: #4ca37d;
   color: #4ca37d;
 }
@@ -2745,6 +2745,14 @@ button{
   color: #fff;
   cursor: not-allowed;
   opacity: 0.8;
+}
+
+.seat-item.locked {
+  background: #f59e0b; /* yellow for locked seating */
+  border-color: #f59e0b;
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .seat-item.selected {

@@ -27,6 +27,7 @@ router.get("/", trainController.getTrains);
 router.get("/search", trainController.searchTrains);
 router.get("/:id", trainController.getTrainById);
 router.get("/:trainId/booked-seats", trainController.getBookedSeats);
+router.post("/:trainId/lock-seat", protect, trainController.lockSeat);
 
 router.post("/", protect, isAdmin, trainController.createTrain);
 router.put("/:id", protect, isAdmin, trainController.updateTrain);

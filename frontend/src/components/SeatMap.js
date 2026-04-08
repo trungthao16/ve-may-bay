@@ -29,26 +29,55 @@ function SeatMap({ train, onSeatSelect }) {
 
   const currentCoach = train.coaches[activeCoach];
 
-  // Helper function to check if a seat is booked
+  const userString = localStorage.getItem("user");
+  const currentUser = userString ? JSON.parse(userString) : null;
+
+  // Helper function to check if a seat is booked (red)
   const isSeatBooked = (seatNum) => {
     return bookedSeats.some(
-      (ticket) => 
-        ticket.coachNumber === currentCoach.coachNumber && 
-        ticket.seatNumber === seatNum.toString()
+      (s) => 
+        s.coachNumber === currentCoach.coachNumber && 
+        s.seatNumber === seatNum.toString() &&
+        !s.isLocked
     );
   };
 
-  const handleSeatClick = (seatNum) => {
-    if (isSeatBooked(seatNum)) return;
+  // Helper function to check if a seat is locked (yellow)
+  const isSeatLocked = (seatNum) => {
+    return bookedSeats.some(
+      (s) => 
+        s.coachNumber === currentCoach.coachNumber && 
+        s.seatNumber === seatNum.toString() &&
+        s.isLocked &&
+        s.lockedBy !== currentUser?._id
+    );
+  };
+
+  const handleSeatClick = async (seatNum) => {
+    if (isSeatBooked(seatNum) || isSeatLocked(seatNum)) return;
     
     // Toggle selection
     if (selectedSeat === seatNum) {
       setSelectedSeat(null);
       onSeatSelect(null, null, 0); // clear
     } else {
-      setSelectedSeat(seatNum);
-      const extraPrice = Number(train.price) * (currentCoach.priceMultiplier - 1);
-      onSeatSelect(currentCoach.coachNumber, seatNum, extraPrice);
+      try {
+        await API.post(`/trains/${train._id}/lock-seat`, { 
+          coachNumber: currentCoach.coachNumber, 
+          seatNumber: seatNum 
+        });
+        
+        setSelectedSeat(seatNum);
+        const extraPrice = Number(train.price) * (currentCoach.priceMultiplier - 1);
+        onSeatSelect(currentCoach.coachNumber, seatNum, extraPrice);
+      } catch (err) {
+        alert(err.response?.data?.message || "Không thể giữ chỗ");
+        // Reload seat map if someone else locked it
+        try {
+          const res = await API.get(`/trains/${train._id}/booked-seats`);
+          setBookedSeats(res.data);
+        } catch (e) {}
+      }
     }
   };
 
@@ -60,14 +89,15 @@ function SeatMap({ train, onSeatSelect }) {
     if (currentCoach.coachType === "soft_seat") {
       for (let i = 1; i <= capacity; i++) {
         const booked = isSeatBooked(i);
+        const locked = isSeatLocked(i);
         const selected = selectedSeat === i;
         
         seats.push(
           <div 
             key={i} 
-            className={`seat-item ${booked ? 'booked' : ''} ${selected ? 'selected' : ''}`}
+            className={`seat-item ${booked ? 'booked' : ''} ${locked ? 'locked' : ''} ${selected ? 'selected' : ''}`}
             onClick={() => handleSeatClick(i)}
-            title={booked ? "Ghế đã đặt" : `Ghế số ${i}`}
+            title={booked ? "Ghế đã đặt" : locked ? "Đang có người thanh toán" : `Ghế số ${i}`}
           >
             {i}
           </div>
@@ -87,14 +117,15 @@ function SeatMap({ train, onSeatSelect }) {
           if (seatNum > capacity) break;
           
           const booked = isSeatBooked(seatNum);
+          const locked = isSeatLocked(seatNum);
           const selected = selectedSeat === seatNum;
           
           cabinSeats.push(
             <div 
               key={seatNum} 
-              className={`seat-item sleeper ${booked ? 'booked' : ''} ${selected ? 'selected' : ''}`}
+              className={`seat-item sleeper ${booked ? 'booked' : ''} ${locked ? 'locked' : ''} ${selected ? 'selected' : ''}`}
               onClick={() => handleSeatClick(seatNum)}
-              title={booked ? "Đã đặt" : `Giường ${seatNum}`}
+              title={booked ? "Đã đặt" : locked ? "Đang thanh toán" : `Giường ${seatNum}`}
             >
               {seatNum}
             </div>
@@ -139,6 +170,7 @@ function SeatMap({ train, onSeatSelect }) {
       <div className="seat-legend">
         <div className="legend-item"><span className="legend-color avail"></span> Còn trống</div>
         <div className="legend-item"><span className="legend-color booked"></span> Đã đặt</div>
+        <div className="legend-item"><span className="legend-color locked" style={{backgroundColor: "#f59e0b"}}></span> Đang giữ chỗ</div>
         <div className="legend-item"><span className="legend-color selected"></span> Đang chọn</div>
       </div>
 

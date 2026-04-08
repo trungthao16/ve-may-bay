@@ -91,6 +91,7 @@
 
 const Train = require("../models/Train");
 const Ticket = require("../models/Ticket");
+const SeatLock = require("../models/SeatLock");
 
 // lấy danh sách tàu
 exports.getTrains = async (req, res) => {
@@ -248,20 +249,68 @@ exports.searchTrains = async (req, res) => {
   }
 };
 
-// Lấy danh sách ghế đã đặt của một tàu
+// Lấy danh sách ghế đã đặt hoặc đang giữ chỗ của một tàu
 exports.getBookedSeats = async (req, res) => {
   try {
     const { trainId } = req.params;
     
-    // Tìm tất cả các vé đã đặt hoặc đã thanh toán của chuyến tàu này
+    // Tìm tất cả các vé đã đặt hoặc đã thanh toán
     const tickets = await Ticket.find({
       train: trainId,
       status: "booked"
-    }).select("coachNumber seatNumber paymentStatus");
+    }).select("coachNumber seatNumber paymentStatus").lean();
 
-    res.json(tickets);
+    // Tìm các ghế đang bị khóa (đang thanh toán)
+    const locks = await SeatLock.find({
+      trainId: trainId
+    }).select("coachNumber seatNumber lockedBy").lean();
+
+    // Map lock thành định dạng giống ticket nhưng có cờ isLocked
+    const lockedSeats = locks.map(lock => ({
+      coachNumber: lock.coachNumber,
+      seatNumber: lock.seatNumber,
+      isLocked: true,
+      lockedBy: lock.lockedBy
+    }));
+
+    // Trả về chung 1 mảng để frontend tiện xử lý
+    res.json([...tickets, ...lockedSeats]);
   } catch (error) {
-    console.error("Lỗi lấy danh sách ghế đã đặt:", error);
+    console.error("Lỗi lấy danh sách ghế:", error);
     res.status(500).json({ message: "Có lỗi xảy ra khi lấy dữ liệu ghế" });
+  }
+};
+
+// Khóa ghế (Giữ chỗ)
+exports.lockSeat = async (req, res) => {
+  try {
+    const { trainId } = req.params;
+    const { coachNumber, seatNumber } = req.body;
+    const userId = req.user.id;
+
+    // Optional: Xóa các vé đã khóa của user này (nếu chỉ muốn user giữ 1 vé tại 1 thời điểm)
+    await SeatLock.deleteMany({ lockedBy: userId });
+
+    if (!coachNumber || !seatNumber) {
+      return res.status(400).json({ message: "Vui lòng truyền số toa và số ghế" });
+    }
+
+    const newLock = new SeatLock({
+      trainId,
+      coachNumber: Number(coachNumber),
+      seatNumber: seatNumber.toString(),
+      lockedBy: userId
+    });
+
+    await newLock.save();
+    res.json({ message: "Giữ chỗ thành công trong 10 phút" });
+
+  } catch (error) {
+    // E11000 duplicate key error means someone else locked it
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Ghế này hiện đang có người khác giữ chỗ. Vui lòng chọn ghế khác!" });
+    }
+    console.error("Lỗi lockSeat:", error);
+    res.status(500).json({ message: "Có lỗi xảy ra khi giữ chỗ" });
   }
 };
