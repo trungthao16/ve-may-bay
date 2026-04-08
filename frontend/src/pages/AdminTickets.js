@@ -181,7 +181,6 @@ function AdminTickets() {
                     const originalPrice = ticket.originalPrice ?? ticket.train?.price ?? 0;
                     const status = ticket.status || "booked";
                     const paymentStatus = ticket.paymentStatus || "unpaid";
-                    const paymentMethod = ticket.paymentMethod || "vnpay";
 
                     return (
                       <tr key={ticket._id}>
