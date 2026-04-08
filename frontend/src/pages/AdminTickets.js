@@ -161,13 +161,11 @@ function AdminTickets() {
                   <tr>
                     <th>Khách hàng</th>
                     <th>Mã Vé & Ngày Đặt</th>
-                    <th>Tàu</th>
-                    <th>Tuyến</th>
+                    <th>Chuyến tàu & Hành trình</th>
                     <th>Ghế</th>
                     <th>Giá (VND)</th>
-                    <th>Trạng thái vé</th>
+                    <th>Trạng thái</th>
                     <th>Thanh toán</th>
-                    <th>Phương thức</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -200,95 +198,84 @@ function AdminTickets() {
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", flexDirection: "column" }}>
-                            <strong style={{ color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</strong>
-                            <span style={{ fontSize: "12px", color: "#666" }}>
+                          <div className="admin-ticket-id-box">
+                            <span className="admin-id-link">#{String(ticket._id).slice(-6).toUpperCase()}</span>
+                            <span className="admin-ticket-date">
                               {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString("vi-VN") : "N/A"}
                             </span>
                           </div>
                         </td>
 
-                        <td>{trainName}</td>
-
                         <td>
-                          <div className="admin-route-box">
-                            <strong>
-                              {from} → {to}
-                            </strong>
-                            <span>Hành trình vé</span>
+                          <div className="admin-trip-info">
+                            <div className="admin-trip-route">{from} ➔ {to}</div>
+                            <div className="admin-trip-sub">{trainName}</div>
                           </div>
                         </td>
 
-                        <td>{ticket.seatNumber || "—"}</td>
-
                         <td>
-                          {ticket.discountAmount > 0 ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                              <span style={{ textDecoration: "line-through", color: "#888", fontSize: "12px" }}>
-                                {Number(originalPrice).toLocaleString("vi-VN")}
-                              </span>
-                              <strong className="admin-price" style={{ margin: 0, padding: 0 }}>
-                                {Number(price).toLocaleString("vi-VN")}
-                              </strong>
-                              <span style={{ backgroundColor: "#28a745", color: "white", padding: "2px 4px", borderRadius: "4px", fontSize: "10px", width: "fit-content" }}>
-                                Khuyến mãi: -{Number(ticket.discountAmount).toLocaleString("vi-VN")}
-                              </span>
-                            </div>
-                          ) : (
-                            <strong className="admin-price">{Number(price).toLocaleString("vi-VN")}</strong>
-                          )}
+                          <div style={{ fontWeight: "700", color: "#475569" }}>{ticket.seatNumber || "—"}</div>
                         </td>
 
                         <td>
-                          <span
-                            className={`admin-badge ${status === "cancelled" ? "cancelled" : "booked"
-                              }`}
-                          >
+                          <div className="admin-price-cell">
+                            {ticket.discountAmount > 0 && (
+                              <span className="admin-price-original">
+                                {Number(originalPrice).toLocaleString("vi-VN")}
+                              </span>
+                            )}
+                            <span className="admin-price-main">
+                              {Number(price).toLocaleString("vi-VN")}
+                            </span>
+                            {ticket.discountAmount > 0 && (
+                              <span className="admin-saving-tag">
+                                Tiết kiệm: -{Number(ticket.discountAmount).toLocaleString("vi-VN")}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className={`admin-badge ${status === "cancelled" ? "cancelled" : "booked"}`}>
                             {renderTicketStatus(status)}
                           </span>
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                            <span
-                              className={`admin-badge payment ${getPaymentBadgeClass(
-                                paymentStatus
-                              )}`}
-                              style={{ width: "fit-content" }}
-                            >
+                          <div className="admin-payment-info">
+                            <span className={`admin-badge payment ${getPaymentBadgeClass(paymentStatus)}`}>
                               {renderPaymentStatus(paymentStatus)}
                             </span>
                             {ticket.paidAt && (
-                              <span style={{ fontSize: "11px", color: "#555" }}>
-                                HD: {new Date(ticket.paidAt).toLocaleDateString("vi-VN")}
+                              <span style={{ fontSize: "11px", color: "#64748b" }}>
+                                {new Date(ticket.paidAt).toLocaleDateString("vi-VN")}
                               </span>
                             )}
                             {ticket.vnpTxnRef && paymentStatus === "paid" && (
-                              <span style={{ fontSize: "11px", color: "#666", wordBreak: "break-all" }}>
-                                Mã GD: {ticket.vnpTxnRef}
+                              <span className="admin-txn-ref" title={ticket.vnpTxnRef}>
+                                Ref: {ticket.vnpTxnRef}
                               </span>
                             )}
                           </div>
                         </td>
 
-                        <td>{paymentMethod}</td>
-
                         <td>
-                          <div className="admin-actions">
+                          <div className="admin-actions-h">
                             {status !== "cancelled" && (
                               <button
-                                className="admin-btn cancel"
+                                className="admin-btn-icon cancel"
+                                title="Hủy vé"
                                 onClick={() => handleCancel(ticket._id)}
                               >
-                                Hủy vé
+                                🚫
                               </button>
                             )}
-
                             <button
-                              className="admin-btn delete"
+                              className="admin-btn-icon delete"
+                              title="Xóa vé"
                               onClick={() => handleDelete(ticket._id)}
                             >
-                              Xóa
+                              🗑️
                             </button>
                           </div>
                         </td>
