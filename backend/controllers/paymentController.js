@@ -35,29 +35,25 @@ function formatDate(date) {
 
 exports.createVNPayPayment = async (req, res) => {
   try {
-    const { ticketId } = req.body;
+    const { ticketId, ticketIds } = req.body;
+    let idsToPay = [];
 
-    if (!ticketId) {
-      return res.status(400).json({ message: "Thiếu ticketId" });
+    if (ticketIds && Array.isArray(ticketIds) && ticketIds.length > 0) {
+      idsToPay = ticketIds;
+    } else if (ticketId) {
+      idsToPay = [ticketId];
     }
 
-    const ticket = await Ticket.findById(ticketId).populate("train");
-    if (!ticket) {
+    if (idsToPay.length === 0) {
+      return res.status(400).json({ message: "Thiếu ticketId(s)" });
+    }
+
+    const tickets = await Ticket.find({ _id: { $in: idsToPay } }).populate("train");
+    if (tickets.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy vé" });
     }
 
-    if (ticket.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Không có quyền thanh toán vé này" });
-    }
-
-    if (ticket.paymentStatus === "paid") {
-      return res.status(400).json({ message: "Vé này đã thanh toán rồi" });
-    }
-
-    if (ticket.status === "cancelled") {
-      return res.status(400).json({ message: "Vé đã hủy, không thể thanh toán" });
-    }
-
+    let totalAmount = 0;
     const tmnCode = process.env.VNP_TMNCODE;
     const secretKey = process.env.VNP_HASHSECRET;
     const vnpUrl = process.env.VNP_URL;
@@ -67,11 +63,25 @@ exports.createVNPayPayment = async (req, res) => {
       return res.status(500).json({ message: "Thiếu cấu hình VNPay trong .env" });
     }
 
-    const createDate = formatDate(new Date());
-    const txnRef = `${ticket._id}_${Date.now()}`;
+    const txnRef = `vnp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    ticket.vnpTxnRef = txnRef;
-    await ticket.save();
+    for (const ticket of tickets) {
+      if (ticket.user.toString() !== req.user.id) {
+        return res.status(403).json({ message: `Không có quyền thanh toán vé ${ticket._id}` });
+      }
+      if (ticket.paymentStatus === "paid") {
+        return res.status(400).json({ message: `Vé ${ticket._id} đã thanh toán rồi` });
+      }
+      if (ticket.status === "cancelled") {
+        return res.status(400).json({ message: `Vé ${ticket._id} đã hủy, không thể thanh toán` });
+      }
+      
+      totalAmount += Number(ticket.price);
+      ticket.vnpTxnRef = txnRef;
+      await ticket.save();
+    }
+
+    const createDate = formatDate(new Date());
 
     const ipAddr =
       req.headers["x-forwarded-for"] ||
@@ -86,9 +96,9 @@ exports.createVNPayPayment = async (req, res) => {
       vnp_Locale: "vn",
       vnp_CurrCode: "VND",
       vnp_TxnRef: txnRef,
-      vnp_OrderInfo: `Thanh toan ve tau ${ticket._id}`,
+      vnp_OrderInfo: `Thanh toan don hang ${txnRef}`,
       vnp_OrderType: "other",
-      vnp_Amount: Number(ticket.price) * 100,
+      vnp_Amount: totalAmount * 100,
       vnp_ReturnUrl: returnUrl,
       vnp_IpAddr: ipAddr,
       vnp_CreateDate: createDate,
@@ -143,23 +153,31 @@ exports.vnpayReturn = async (req, res) => {
 
     const { vnp_TxnRef, vnp_ResponseCode, vnp_TransactionNo } = req.query;
 
-    const ticket = await Ticket.findOne({ vnpTxnRef: vnp_TxnRef });
-    if (!ticket) {
-      return res.status(404).send("Không tìm thấy vé");
+    const tickets = await Ticket.find({ vnpTxnRef: vnp_TxnRef });
+    if (tickets.length === 0) {
+      return res.status(404).send("Không tìm thấy giao dịch vé");
     }
 
     if (vnp_ResponseCode === "00") {
-      ticket.paymentStatus = "paid";
-      ticket.paymentMethod = "vnpay";
-      ticket.paidAt = new Date();
-      ticket.vnpTransactionNo = vnp_TransactionNo || null;
-      await ticket.save();
+      await Ticket.updateMany(
+        { vnpTxnRef: vnp_TxnRef },
+        { 
+          $set: { 
+            paymentStatus: "paid",
+            paymentMethod: "vnpay",
+            paidAt: new Date(),
+            vnpTransactionNo: vnp_TransactionNo || null
+          }
+        }
+      );
 
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
       return res.redirect(`${frontendUrl}/mytickets?payment=success`);
     } else {
-      ticket.paymentStatus = "failed";
-      await ticket.save();
+      await Ticket.updateMany(
+        { vnpTxnRef: vnp_TxnRef },
+        { $set: { paymentStatus: "failed" } }
+      );
 
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
       return res.redirect(`${frontendUrl}/mytickets?payment=failed`);

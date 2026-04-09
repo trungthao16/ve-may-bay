@@ -6,16 +6,12 @@ exports.createTicket = async (req, res) => {
   try {
     const {
       trainId,
-      seatNumber,
-      coachNumber,
+      passengers, // Mảng các hành khách: [{ name, cccd, type, coachNumber, seatNumber }]
       promotionCode,
-      passengerName,
-      cccd,
-      passengerType,
     } = req.body;
 
-    if (!trainId || !seatNumber || !coachNumber || !passengerName || !cccd) {
-      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    if (!trainId || !passengers || !Array.isArray(passengers) || passengers.length === 0) {
+      return res.status(400).json({ message: "Thiếu thông tin hành khách hoặc chuyến tàu" });
     }
 
     const train = await Train.findById(trainId);
@@ -23,60 +19,65 @@ exports.createTicket = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy chuyến tàu" });
     }
 
-    // Kiểm tra ghế đã được đặt chưa (theo cả toa + số ghế)
-    const existingTicket = await Ticket.findOne({
-      train: trainId,
-      coachNumber: Number(coachNumber),
-      seatNumber: seatNumber.toString(),
-      status: "booked",
-    });
+    const createdTickets = [];
+    const promotion = promotionCode ? await Promotion.findOne({
+      code: promotionCode.trim().toUpperCase(),
+      isActive: true,
+    }) : null;
 
-    if (existingTicket) {
-      return res.status(400).json({ message: "Ghế này đã được đặt" });
-    }
+    const now = new Date();
 
-    // Tính giá dựa theo loại toa (nếu tàu có toa)
-    let basePrice = Number(train.price);
-    if (train.coaches && train.coaches.length > 0) {
-      const coach = train.coaches.find(c => c.coachNumber === Number(coachNumber));
-      if (coach && coach.priceMultiplier && coach.priceMultiplier !== 1) {
-        basePrice = Math.round(basePrice * coach.priceMultiplier);
+    for (const p of passengers) {
+      const { name, cccd, type, coachNumber, seatNumber } = p;
+
+      if (!name || !cccd || !coachNumber || !seatNumber) {
+        throw new Error(`Hành khách ${name || ""} thiếu thông tin bắt buộc`);
       }
-    }
 
-    // Logic giảm giá theo đối tượng
-    let objectDiscountRate = 0;
-    const type = passengerType || "adult";
-    if (type === "child") objectDiscountRate = 0.25;      // Giẻ em: giảm 25%
-    else if (type === "student") objectDiscountRate = 0.10; // Sinh viên: giảm 10%
-    else if (type === "senior") objectDiscountRate = 0.15;  // Người già: giảm 15%
-
-    const objectDiscount = Math.round(basePrice * objectDiscountRate);
-    const priceAfterObjectDiscount = basePrice - objectDiscount;
-
-    let validPromotionCode = null;
-    let validDiscountAmount = 0;
-    let finalTicketPrice = priceAfterObjectDiscount;
-
-    if (promotionCode) {
-      const promotion = await Promotion.findOne({
-        code: promotionCode.trim().toUpperCase(),
-        isActive: true,
+      // Kiểm tra ghế đã được đặt chưa
+      const existingTicket = await Ticket.findOne({
+        train: trainId,
+        coachNumber: Number(coachNumber),
+        seatNumber: seatNumber.toString(),
+        status: "booked",
       });
 
-      const now = new Date();
+      if (existingTicket) {
+        throw new Error(`Ghế ${seatNumber} toa ${coachNumber} đã được đặt bởi người khác`);
+      }
 
-      if (
-        promotion &&
-        promotion.startDate <= now &&
-        promotion.endDate >= now &&
-        Number(train.price) >= (promotion.minOrderValue || 0)
+      // Tính giá dựa theo loại toa
+      let basePrice = Number(train.price);
+      if (train.coaches && train.coaches.length > 0) {
+        const coach = train.coaches.find(c => c.coachNumber === Number(coachNumber));
+        if (coach && coach.priceMultiplier && coach.priceMultiplier !== 1) {
+          basePrice = Math.round(basePrice * coach.priceMultiplier);
+        }
+      }
+
+      // Logic giảm giá theo đối tượng
+      let objectDiscountRate = 0;
+      const pType = type || "adult";
+      if (pType === "child") objectDiscountRate = 0.25;
+      else if (pType === "student") objectDiscountRate = 0.10;
+      else if (pType === "senior") objectDiscountRate = 0.15;
+
+      const objectDiscount = Math.round(basePrice * objectDiscountRate);
+      const priceAfterObjectDiscount = basePrice - objectDiscount;
+
+      let validPromotionCode = null;
+      let validDiscountAmount = 0;
+      let finalTicketPrice = priceAfterObjectDiscount;
+
+      // Áp dụng khuyến mãi nếu có
+      if (promotion &&
+          promotion.startDate <= now &&
+          promotion.endDate >= now &&
+          priceAfterObjectDiscount >= (promotion.minOrderValue || 0)
       ) {
         let recalculatedDiscount = 0;
-
         if (promotion.discountType === "percent") {
           recalculatedDiscount = Math.round((priceAfterObjectDiscount * promotion.discountValue) / 100);
-
           if (promotion.maxDiscount > 0) {
             recalculatedDiscount = Math.min(recalculatedDiscount, promotion.maxDiscount);
           }
@@ -88,33 +89,36 @@ exports.createTicket = async (req, res) => {
         validDiscountAmount = recalculatedDiscount;
         finalTicketPrice = Math.max(priceAfterObjectDiscount - recalculatedDiscount, 0);
       }
+
+      const ticket = await Ticket.create({
+        user: req.user.id,
+        train: trainId,
+        seatNumber: seatNumber.toString(),
+        coachNumber: Number(coachNumber),
+        originalPrice: basePrice,
+        passengerName: name,
+        cccd: cccd,
+        passengerType: pType,
+        objectDiscount,
+        discountAmount: validDiscountAmount,
+        promotionCode: validPromotionCode,
+        price: finalTicketPrice,
+        status: "booked",
+        paymentStatus: "unpaid",
+        paymentMethod: "vnpay",
+      });
+
+      createdTickets.push(ticket);
     }
 
-    // nếu không có mã thì vẫn cho dùng giá từ backend chuẩn
-    // không tin hoàn toàn discountAmount/finalPrice từ frontend
-    const ticket = await Ticket.create({
-      user: req.user.id,
-      train: trainId,
-      seatNumber: seatNumber.toString(),
-      coachNumber: Number(coachNumber),
-      originalPrice: basePrice,
-      passengerName,
-      cccd,
-      passengerType: type,
-      objectDiscount,
-      discountAmount: validDiscountAmount,
-      promotionCode: validPromotionCode,
-      price: finalTicketPrice,
-      status: "booked",
-      paymentStatus: "unpaid",
-      paymentMethod: "vnpay",
+    // Xóa tất cả SeatLock của user này cho train này sau khi đặt thành công
+    const SeatLock = require("../models/SeatLock");
+    await SeatLock.deleteMany({ trainId, lockedBy: req.user.id });
+
+    res.status(201).json({
+      message: `Đã đặt thành công ${createdTickets.length} vé`,
+      tickets: createdTickets
     });
-
-    const populatedTicket = await Ticket.findById(ticket._id)
-      .populate("user", "name email")
-      .populate("train");
-
-    res.status(201).json(populatedTicket);
   } catch (error) {
     console.error("CREATE TICKET ERROR:", error);
     res.status(500).json({ message: error.message });

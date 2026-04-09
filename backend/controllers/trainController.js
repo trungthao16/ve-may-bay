@@ -197,9 +197,6 @@ exports.lockSeat = async (req, res) => {
     const { coachNumber, seatNumber } = req.body;
     const userId = req.user.id;
 
-    // Optional: Xóa các vé đã khóa của user này (nếu chỉ muốn user giữ 1 vé tại 1 thời điểm)
-    await SeatLock.deleteMany({ lockedBy: userId });
-
     if (!coachNumber || !seatNumber) {
       return res.status(400).json({ message: "Vui lòng truyền số toa và số ghế" });
     }

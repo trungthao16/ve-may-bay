@@ -246,35 +246,51 @@ function AdminTickets() {
                               {renderPaymentStatus(paymentStatus)}
                             </span>
                             {ticket.paidAt && (
-                              <span style={{ fontSize: "11px", color: "#64748b" }}>
+                              <span style={{ display: "block", fontSize: "12.5px", color: "#475569", fontWeight: "600", marginTop: "4px" }}>
                                 {new Date(ticket.paidAt).toLocaleDateString("vi-VN")}
                               </span>
                             )}
                             {ticket.vnpTxnRef && paymentStatus === "paid" && (
-                              <span className="admin-txn-ref" title={ticket.vnpTxnRef}>
-                                Ref: {ticket.vnpTxnRef}
+                              <span title={ticket.vnpTxnRef} style={{ display: "block", fontSize: "12px", color: "#475569", fontFamily: "monospace", marginTop: "2px" }}>
+                                Ref: {ticket.vnpTxnRef.slice(0, 18)}...
                               </span>
                             )}
                           </div>
                         </td>
 
                         <td>
-                          <div className="admin-actions-h">
+                          <div className="admin-actions-h" style={{ display: "flex", gap: "8px" }}>
                             {status !== "cancelled" && (
                               <button
                                 className="admin-btn-icon cancel"
                                 title="Hủy vé"
                                 onClick={() => handleCancel(ticket._id)}
+                                style={{ background: "#fff", border: "1px solid #d6a437", color: "#d6a437", width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "0.2s" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fffdf7"; e.currentTarget.style.transform = "scale(1.05)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.transform = "scale(1)"; }}
                               >
-                                🚫
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
                               </button>
                             )}
                             <button
                               className="admin-btn-icon delete"
                               title="Xóa vé"
                               onClick={() => handleDelete(ticket._id)}
+                              style={{ background: "#fff", border: "1px solid #c9503a", color: "#c9503a", width: "34px", height: "34px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "0.2s" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = "#fffafa"; e.currentTarget.style.transform = "scale(1.05)"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.transform = "scale(1)"; }}
                             >
-                              🗑️
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6L18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path>
+                              </svg>
                             </button>
                           </div>
                         </td>

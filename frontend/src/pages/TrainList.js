@@ -26,6 +26,10 @@ function TrainList() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("time-asc");
 
+  // State for roundtrip selection
+  const [selectedOutbound, setSelectedOutbound] = useState(null);
+  const [selectedReturn, setSelectedReturn] = useState(null);
+
   const stations = [
     // Tuyến đường sắt Thống Nhất (Bắc - Nam)
     "Hà Nội", "TP Hồ Chí Minh", "Phủ Lý", "Nam Định", "Ninh Bình", "Bỉm Sơn", "Thanh Hóa", "Minh Khôi",
@@ -65,14 +69,16 @@ function TrainList() {
         let finalGoTrips = Array.isArray(resGo.data) ? resGo.data : [];
 
         let backTrips = [];
-        if (initialTripType === "roundtrip" && initialReturnDate) {
+        if (initialTripType === "roundtrip") {
           const paramsBack = {
             from: initialTo,
             to: initialFrom,
-            date: initialReturnDate,
             tripType: initialTripType,
             groupSize: initialGroupSize,
           };
+          if (initialReturnDate) {
+            paramsBack.date = initialReturnDate;
+          }
           const resBack = await API.get("/trains/search", { params: paramsBack });
           backTrips = Array.isArray(resBack.data) ? resBack.data : [];
         }
@@ -80,13 +86,16 @@ function TrainList() {
         setOutboundTrains(finalGoTrips);
         setReturnTrains(backTrips);
 
-        // Sync state with URL params
         setSearchFrom(initialFrom);
         setSearchTo(initialTo);
         setSearchDate(initialDate);
         setSearchTripType(initialTripType);
         setSearchReturnDate(initialReturnDate);
         setSearchGroupSize(initialGroupSize);
+
+        // Reset selection when search changes
+        setSelectedOutbound(null);
+        setSelectedReturn(null);
 
       } catch (error) {
         console.error("Lỗi lấy danh sách tàu:", error);
@@ -128,6 +137,12 @@ function TrainList() {
 
   const sortTrains = (trainList) => {
     return [...trainList].sort((a, b) => {
+      // Luôn sắp xếp theo ngày khởi hành trước (ngày gần nhất lên đầu)
+      const dateA = new Date(a.departureDate || 0);
+      const dateB = new Date(b.departureDate || 0);
+      if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+
+      // Cùng ngày thì sắp theo tiêu chí người dùng chọn
       if (sortBy === "price-asc") return (a.price || 0) - (b.price || 0);
       if (sortBy === "price-desc") return (b.price || 0) - (a.price || 0);
       if (sortBy === "time-asc") return (a.departureTime || "").localeCompare(b.departureTime || "");
@@ -136,7 +151,7 @@ function TrainList() {
     });
   };
 
-  const renderTrainCard = (train) => {
+  const renderTrainCard = (train, isReturn = false) => {
     const total = train.totalSeats || train.seats || 0;
     const avail = train.availableSeats !== undefined ? train.availableSeats : total;
 
@@ -151,8 +166,10 @@ function TrainList() {
       badgeColor = "#fd7e14"; // cam
     }
 
+    const isSelected = isReturn ? selectedReturn === train._id : selectedOutbound === train._id;
+
     return (
-      <div className="train-card" key={train._id}>
+      <div className="train-card" key={train._id} style={isSelected ? { border: '2px solid #4ca37d', background: '#f5fff9', boxShadow: '0 4px 15px rgba(76, 163, 125, 0.2)' } : {}}>
         <div className="train-top">
           <div>
             <span className="train-badge" style={{ backgroundColor: badgeColor }}>
@@ -203,14 +220,34 @@ function TrainList() {
           </div>
         </div>
 
-        <button
-          className="book-btn"
-          disabled={avail <= 0}
-          style={{ opacity: avail <= 0 ? 0.6 : 1, cursor: avail <= 0 ? "not-allowed" : "pointer" }}
-          onClick={() => navigate(`/booking/${train._id}`)}
-        >
-          {avail <= 0 ? "Đã bán hết" : "Đặt vé ngay"}
-        </button>
+        {initialTripType === "roundtrip" ? (
+          <button
+            className="book-btn"
+            disabled={avail <= 0}
+            style={{
+              opacity: avail <= 0 ? 0.6 : 1,
+              cursor: avail <= 0 ? "not-allowed" : "pointer",
+              background: isSelected ? '#fff' : '',
+              color: isSelected ? '#4ca37d' : '',
+              border: isSelected ? '1px solid #4ca37d' : ''
+            }}
+            onClick={() => {
+              if (isReturn) setSelectedReturn(train._id);
+              else setSelectedOutbound(train._id);
+            }}
+          >
+            {avail <= 0 ? "Đã bán hết" : isSelected ? "Đã Chọn" : (isReturn ? "Chọn Chiều Về" : "Chọn Chiều Đi")}
+          </button>
+        ) : (
+          <button
+            className="book-btn"
+            disabled={avail <= 0}
+            style={{ opacity: avail <= 0 ? 0.6 : 1, cursor: avail <= 0 ? "not-allowed" : "pointer" }}
+            onClick={() => navigate(`/booking/${train._id}`)}
+          >
+            {avail <= 0 ? "Đã bán hết" : "Đặt vé ngay"}
+          </button>
+        )}
       </div>
     );
   };
@@ -222,12 +259,24 @@ function TrainList() {
       </datalist>
 
       <div className="rv-container trainlist-wrap">
-        {/* Bộ Lọc Tìm Kiếm Trên Trang */}
         <div className="search-box" style={{ marginBottom: "40px" }}>
           <form className="trainlist-search-form" onSubmit={handleSearch}>
             <div className="field">
               <label>Loại vé</label>
-              <select value={searchTripType} onChange={(e) => setSearchTripType(e.target.value)}>
+              <select value={searchTripType} onChange={(e) => {
+                 const newType = e.target.value;
+                 setSearchTripType(newType);
+                 
+                 const params = {
+                   from: searchFrom,
+                   to: searchTo,
+                   date: searchDate,
+                   tripType: newType,
+                 };
+                 if (newType === "roundtrip") params.returnDate = searchReturnDate;
+                 if (newType === "group") params.groupSize = searchGroupSize;
+                 navigate(`/trains?${new URLSearchParams(params).toString()}`);
+              }}>
                 <option value="oneway">Một chiều</option>
                 <option value="roundtrip">Khứ hồi</option>
                 <option value="group">Đoàn</option>
@@ -301,36 +350,116 @@ function TrainList() {
           </div>
         ) : (
           <>
-            <h2 style={{ marginBottom: "12px" }}>
-              Chuyến đi ({initialFrom || "Tất cả"} → {initialTo || "Tất cả"})
-            </h2>
-
-            {outboundTrains.length === 0 ? (
-              <div className="empty-box">Không có chuyến đi phù hợp.</div>
-            ) : (
-              <div className="train-grid">
-                {sortTrains(outboundTrains).map((train) => renderTrainCard(train))}
-              </div>
-            )}
-
-            {initialTripType === "roundtrip" && (
+            {/* BƯỚC 1: Hiển thị chuyến đi (khi chưa chọn hoặc không phải roundtrip) */}
+            {(!initialTripType || initialTripType !== "roundtrip" || !selectedOutbound) && (
               <>
-                <h2 style={{ marginTop: "30px", marginBottom: "12px" }}>
-                  Chuyến về ({initialTo || "Tất cả"} → {initialFrom || "Tất cả"})
+                <h2 style={{ marginBottom: "12px" }}>
+                  {initialTripType === "roundtrip" ? "Bước 1: " : ""}Chuyến đi ({initialFrom || "Tất cả"} → {initialTo || "Tất cả"})
                 </h2>
 
-                {returnTrains.length === 0 ? (
-                  <div className="empty-box">Không có chuyến về phù hợp.</div>
+                {outboundTrains.length === 0 ? (
+                  <div className="empty-box">Không có chuyến đi phù hợp.</div>
                 ) : (
                   <div className="train-grid">
-                    {sortTrains(returnTrains).map((train) => renderTrainCard(train))}
+                    {sortTrains(outboundTrains).map((train) => renderTrainCard(train, false))}
                   </div>
                 )}
               </>
             )}
+
+            {/* BƯỚC 2: Hiển thị chuyến về (khi đã chọn chuyến đi trong roundtrip) */}
+            {initialTripType === "roundtrip" && selectedOutbound && (() => {
+              const chosenOutbound = outboundTrains.find(t => t._id === selectedOutbound);
+              
+              // Tính thời điểm sớm nhất có thể về = ngày đi + giờ đến + 3 tiếng
+              let earliestReturnTime = null;
+              if (chosenOutbound?.departureDate) {
+                const outDate = new Date(chosenOutbound.departureDate);
+                const [arrH, arrM] = (chosenOutbound.arrivalTime || "23:59").split(":").map(Number);
+                earliestReturnTime = new Date(outDate);
+                earliestReturnTime.setHours(arrH + 3, arrM, 0, 0); // +3 tiếng sau giờ đến
+              }
+
+              const filteredReturn = returnTrains.filter(t => {
+                const matchRoute = t.from === (chosenOutbound?.to || initialTo) && 
+                                   t.to === (chosenOutbound?.from || initialFrom);
+                if (!matchRoute) return false;
+                if (!earliestReturnTime || !t.departureDate) return true;
+
+                const retDate = new Date(t.departureDate);
+                const [retH, retM] = (t.departureTime || "00:00").split(":").map(Number);
+                const retDateTime = new Date(retDate);
+                retDateTime.setHours(retH, retM, 0, 0);
+
+                return retDateTime >= earliestReturnTime;
+              });
+
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => { setSelectedOutbound(null); setSelectedReturn(null); window.scrollTo({ top: 300, behavior: 'smooth' }); }}
+                      style={{ background: '#fff', border: '1px solid #c9503a', color: '#c9503a', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      ← Quay lại chọn chiều đi
+                    </button>
+                    <div style={{ background: '#dff4e3', color: '#247046', padding: '8px 14px', borderRadius: '10px', fontSize: '14px', fontWeight: '600' }}>
+                      ✓ Chiều đi: {chosenOutbound?.trainName} ({chosenOutbound?.from} → {chosenOutbound?.to}) - {chosenOutbound?.departureTime}
+                    </div>
+                  </div>
+
+                  <h2 style={{ marginBottom: "12px" }}>
+                    Bước 2: Chuyến về ({chosenOutbound?.to || "Tất cả"} → {chosenOutbound?.from || "Tất cả"})
+                  </h2>
+
+                  {filteredReturn.length === 0 ? (
+                    <div className="empty-box">Không có chuyến về phù hợp từ {chosenOutbound?.to} về {chosenOutbound?.from}.</div>
+                  ) : (
+                    <div className="train-grid">
+                      {sortTrains(filteredReturn).map((train) => renderTrainCard(train, true))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </>
         )}
       </div>
+
+      {initialTripType === "roundtrip" && (selectedOutbound || selectedReturn) && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: '#fff',
+          padding: '15px 30px',
+          boxShadow: '0 -4px 15px rgba(0,0,0,0.1)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div>
+            <p style={{ margin: 0, fontWeight: 'bold' }}>Tiến trình Đặt vé Khứ hồi</p>
+            <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>
+              Chiều đi: {selectedOutbound ? "Đã chọn" : "Chưa chọn"} | Chiều về: {selectedReturn ? "Đã chọn" : "Chưa chọn"}
+            </p>
+          </div>
+          <button
+            className="book-btn"
+            disabled={!selectedOutbound || !selectedReturn}
+            style={{ opacity: (!selectedOutbound || !selectedReturn) ? 0.6 : 1, padding: '12px 30px', fontSize: '16px' }}
+            onClick={() => {
+              if (selectedOutbound && selectedReturn) {
+                navigate(`/booking/${selectedOutbound}?returnTrainId=${selectedReturn}`);
+              }
+            }}
+          >
+            Đến trang Đặt Vé
+          </button>
+        </div>
+      )}
     </div>
   );
 }

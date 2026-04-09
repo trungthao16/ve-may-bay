@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 function SeatMap({ train, onSeatSelect }) {
   const [activeCoach, setActiveCoach] = useState(0);
   const [bookedSeats, setBookedSeats] = useState([]);
-  const [selectedSeat, setSelectedSeat] = useState(null);
+  const [selectedSeats, setSelectedSeats] = useState([]); // Array: [{ coachNumber, seatNumber, extraPrice }]
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,26 +54,50 @@ function SeatMap({ train, onSeatSelect }) {
     );
   };
 
+  const isSeatSelected = (seatNum) => {
+    return selectedSeats.some(
+      (s) => s.coachNumber === currentCoach.coachNumber && s.seatNumber === seatNum.toString()
+    );
+  };
+
   const handleSeatClick = async (seatNum) => {
     if (isSeatBooked(seatNum) || isSeatLocked(seatNum)) return;
     
-    // Toggle selection
-    if (selectedSeat === seatNum) {
-      setSelectedSeat(null);
-      onSeatSelect(null, null, 0); // clear
+    const seatStr = seatNum.toString();
+    const isAlreadySelected = isSeatSelected(seatNum);
+
+    if (isAlreadySelected) {
+      // Bỏ chọn
+      const newSelected = selectedSeats.filter(
+        (s) => !(s.coachNumber === currentCoach.coachNumber && s.seatNumber === seatStr)
+      );
+      setSelectedSeats(newSelected);
+      onSeatSelect(newSelected);
+      
+      // Optional: Unlock on server if you want
+      // await API.post(`/trains/${train._id}/unlock-seat`, { coachNumber: currentCoach.coachNumber, seatNumber: seatStr });
     } else {
+      // Chọn mới
       try {
         await API.post(`/trains/${train._id}/lock-seat`, { 
           coachNumber: currentCoach.coachNumber, 
-          seatNumber: seatNum 
+          seatNumber: seatStr 
         });
         
-        setSelectedSeat(seatNum);
         const extraPrice = Number(train.price) * (currentCoach.priceMultiplier - 1);
-        onSeatSelect(currentCoach.coachNumber, seatNum, extraPrice);
+        const newSeat = {
+          coachNumber: currentCoach.coachNumber,
+          seatNumber: seatStr,
+          extraPrice: extraPrice,
+          coachType: currentCoach.coachType
+        };
+        
+        const newSelected = [...selectedSeats, newSeat];
+        setSelectedSeats(newSelected);
+        onSeatSelect(newSelected);
       } catch (err) {
         toast.error(err.response?.data?.message || "Không thể giữ chỗ");
-        // Reload seat map if someone else locked it
+        // Reload seat map
         try {
           const res = await API.get(`/trains/${train._id}/booked-seats`);
           setBookedSeats(res.data);
@@ -86,12 +110,11 @@ function SeatMap({ train, onSeatSelect }) {
     const seats = [];
     const capacity = currentCoach.capacity;
     
-    // Hiển thị tuỳ theo loại toa
     if (currentCoach.coachType === "soft_seat") {
       for (let i = 1; i <= capacity; i++) {
         const booked = isSeatBooked(i);
         const locked = isSeatLocked(i);
-        const selected = selectedSeat === i;
+        const selected = isSeatSelected(i);
         
         seats.push(
           <div 
@@ -106,7 +129,6 @@ function SeatMap({ train, onSeatSelect }) {
       }
       return <div className="seat-grid soft-seat">{seats}</div>;
     } else if (currentCoach.coachType === "sleeper") {
-      // Chia theo khoang (mỗi khoang 4 giường hoặc 6 giường tuỳ capacity)
       const bedsPerCabin = capacity > 30 ? 6 : 4;
       const totalCabins = Math.ceil(capacity / bedsPerCabin);
       
@@ -119,7 +141,7 @@ function SeatMap({ train, onSeatSelect }) {
           
           const booked = isSeatBooked(seatNum);
           const locked = isSeatLocked(seatNum);
-          const selected = selectedSeat === seatNum;
+          const selected = isSeatSelected(seatNum);
           
           cabinSeats.push(
             <div 
@@ -148,7 +170,7 @@ function SeatMap({ train, onSeatSelect }) {
 
   return (
     <div className="seat-map-container">
-      <h3>Chọn Toa & Ghế</h3>
+      <h3>Chọn Toa & Ghế (Bạn có thể chọn nhiều ghế)</h3>
       
       <div className="coach-selector">
         {train.coaches.map((coach, index) => (
@@ -156,11 +178,7 @@ function SeatMap({ train, onSeatSelect }) {
             key={coach._id || index}
             type="button"
             className={`coach-btn ${activeCoach === index ? 'active' : ''}`}
-            onClick={() => {
-              setActiveCoach(index);
-              setSelectedSeat(null); // clear selection when change coach
-              onSeatSelect(null, null, 0); 
-            }}
+            onClick={() => setActiveCoach(index)}
           >
             Toa {coach.coachNumber} <br/>
             <small>{coach.coachType === "soft_seat" ? "Ngồi mềm" : "Giường nằm"}</small>

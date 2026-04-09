@@ -1,8 +1,42 @@
-import React from "react";
+import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
-function TicketQRCode({ ticket, onClose, onPrint }) {
+function TicketQRCode({ ticket, onClose }) {
+  const [downloading, setDownloading] = useState(false);
+
   if (!ticket) return null;
+
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloading(true);
+      const captureElem = document.getElementById(`ticket-${ticket._id}`);
+      if (!captureElem) return;
+
+      const canvas = await html2canvas(captureElem, {
+        scale: 2, // Tăng độ nét
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const paramWidth = pdfWidth - 20; // lề 10mm mỗi bên
+      const paramHeight = (imgProps.height * paramWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 10, 10, paramWidth, paramHeight);
+      pdf.save(`VeTau_${ticket._id.slice(-6)}.pdf`);
+    } catch (err) {
+      console.error("Lỗi xuất PDF:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Render QR content logic
   const qrValue = JSON.stringify({
@@ -75,8 +109,11 @@ function TicketQRCode({ ticket, onClose, onPrint }) {
 
         {/* Action Buttons (Not printed) */}
         <div style={styles.actions} className="no-print">
-          <button onClick={onPrint} style={{ ...styles.btn, background: "#4ca37d", color: "#fff" }}>
-            🖨️ In Vé / Lưu PDF
+          <button 
+            onClick={downloading ? null : handleDownloadPDF} 
+            style={{ ...styles.btn, background: downloading ? "#ccc" : "#4ca37d", color: "#fff", cursor: downloading ? "not-allowed" : "pointer" }}
+          >
+            {downloading ? "⏳ Đang tạo PDF..." : "🖨️ Tải vé PDF"}
           </button>
           <button onClick={onClose} style={{ ...styles.btn, background: "#e2e8f0", color: "#333" }}>
             Đóng

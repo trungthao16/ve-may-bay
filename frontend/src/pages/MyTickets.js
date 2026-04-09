@@ -100,8 +100,45 @@ function MyTickets() {
     return "Chưa thanh toán";
   };
 
-  const handlePrint = () => {
-    window.print();
+
+  const groupedOrders = [];
+  if (tickets && tickets.length > 0) {
+    let currentGroup = [tickets[0]];
+    groupedOrders.push(currentGroup);
+
+    for (let i = 1; i < tickets.length; i++) {
+      const prevTicket = currentGroup[currentGroup.length - 1];
+      const currTicket = tickets[i];
+      const timeDiff = prevTicket.createdAt && currTicket.createdAt ? Math.abs(new Date(prevTicket.createdAt) - new Date(currTicket.createdAt)) : 0;
+
+      if (timeDiff < 5000) {
+        currentGroup.push(currTicket);
+      } else {
+        currentGroup = [currTicket];
+        groupedOrders.push(currentGroup);
+      }
+    }
+  }
+
+  const handleVNPayGroup = async (groupTickets) => {
+    const unpaidTickets = groupTickets.filter(
+      (t) => t.status !== "cancelled" && t.paymentStatus !== "paid"
+    );
+    if (unpaidTickets.length === 0) return;
+
+    try {
+      const ticketIds = unpaidTickets.map((t) => t._id);
+      const res = await API.post("/payment/create-vnpay", { ticketIds });
+
+      if (res.data?.paymentUrl) {
+        window.location.href = res.data.paymentUrl;
+      } else {
+        toast.error("Không lấy được link thanh toán.");
+      }
+    } catch (error) {
+      console.log("Lỗi tạo thanh toán VNPay:", error);
+      toast.error(error.response?.data?.message || "Không tạo được link thanh toán.");
+    }
   };
 
   if (!user) {
@@ -121,144 +158,156 @@ function MyTickets() {
 
       {loading ? (
         <div className="empty-box">Đang tải danh sách vé...</div>
-      ) : tickets.length === 0 ? (
+      ) : groupedOrders.length === 0 ? (
         <div className="empty-box">Bạn chưa đặt vé nào.</div>
       ) : (
-        <div className="ticket-grid">
-          {tickets.map((ticket) => (
-            <div className="ticket-card" key={ticket._id}>
-              <div className="ticket-status">
-                {ticket.status === "cancelled" ? "Đã hủy" : "Đã đặt"}
-              </div>
+        <div className="orders-container" style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+          {groupedOrders.map((group, gIndex) => {
+            const groupUnpaidCount = group.filter(t => t.paymentStatus !== "paid" && t.status !== "cancelled").length;
+            const groupUnpaidTotal = group.filter(t => t.paymentStatus !== "paid" && t.status !== "cancelled").reduce((s, t) => s + Number(t.price), 0);
 
-              <h3>{ticket.train?.name || ticket.train?.trainName || "Chuyến tàu"}</h3>
+            return (
+              <div key={gIndex} className="order-group" style={{ background: '#fafafa', border: '1px solid #eaeaea', borderRadius: '12px', padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '15px', borderBottom: '2px solid #ddd' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 5px 0' }}>Ngày đặt: {group[0].createdAt ? new Date(group[0].createdAt).toLocaleString("vi-VN") : "Không xác định"}</h3>
+                    <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Bao gồm {group.length} vé</p>
+                  </div>
 
-              <p>
-                <strong>Mã vé:</strong> <span style={{ fontWeight: "bold", color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</span>
-              </p>
-
-              <p>
-                <strong>Ngày đặt:</strong>{" "}
-                {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString("vi-VN") : "Chưa có"}
-              </p>
-
-              <p>
-                <strong>Tuyến:</strong> {ticket.train?.from} → {ticket.train?.to}
-              </p>
-
-              <p>
-                <strong>Ghế:</strong> {ticket.seatNumber}
-              </p>
-
-              <p>
-                <strong>Ngày khởi hành:</strong>{" "}
-                {ticket.train?.departureDate
-                  ? new Date(ticket.train.departureDate).toLocaleDateString("vi-VN")
-                  : "Chưa có"}
-              </p>
-
-              <p>
-                <strong>Khởi hành:</strong> {ticket.train?.departureTime || "Chưa có"}
-              </p>
-
-              {ticket.discountAmount > 0 ? (
-                <div style={{ marginBottom: "10px", padding: "8px", backgroundColor: "#f9f9f9", borderRadius: "8px", border: "1px dashed #ccc" }}>
-                  <p style={{ margin: "4px 0" }}>
-                    <strong>Giá gốc:</strong>{" "}
-                    <span style={{ textDecoration: "line-through", color: "#888" }}>
-                      {(ticket.originalPrice || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
-                    </span>
-                  </p>
-                  <p style={{ margin: "4px 0", color: "#28a745" }}>
-                    <strong>Giảm giá:</strong> -{(ticket.discountAmount).toLocaleString("vi-VN")}đ
-                    {ticket.promotionCode && (
-                      <span style={{ backgroundColor: "#28a745", color: "white", padding: "2px 6px", borderRadius: "10px", fontSize: "11px", marginLeft: "6px" }}>
-                        {ticket.promotionCode}
-                      </span>
-                    )}
-                  </p>
-                  <p style={{ margin: "4px 0" }}>
-                    <strong>Thành tiền:</strong>{" "}
-                    <span style={{ color: "#d9534f", fontWeight: "bold", fontSize: "1.1em" }}>
-                      {(ticket.price || 0).toLocaleString("vi-VN")}đ
-                    </span>
-                  </p>
+                  {groupUnpaidCount > 0 && (
+                    <div style={{ background: '#fff3cd', padding: '10px 15px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '15px', border: '1px solid #ffeeba' }}>
+                      <div>
+                        <span style={{ fontSize: '13px', color: '#856404' }}>Chưa thanh toán ({groupUnpaidCount} vé)</span>
+                        <div style={{ fontWeight: 'bold', color: '#c9503a', fontSize: '16px' }}>{groupUnpaidTotal.toLocaleString()}đ</div>
+                      </div>
+                      <button onClick={() => handleVNPayGroup(group)} style={{ background: '#c9503a', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                        Thanh toán
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <p>
-                  <strong>Giá:</strong>{" "}
-                  {(ticket.price || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
-                </p>
-              )}
 
-              <p>
-                <strong>Thanh toán:</strong> {renderPaymentText(ticket)}
-              </p>
+                <div className="ticket-grid">
+                  {group.map((ticket) => (
+                    <div className="ticket-card" key={ticket._id} style={{ background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                      <div className="ticket-status">
+                        {ticket.status === "cancelled" ? "Đã hủy" : "Đã đặt"}
+                      </div>
 
-              <p>
-                <strong>Phương thức:</strong> {ticket.paymentMethod || "vnpay"}
-              </p>
+                      <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{ticket.train?.name || ticket.train?.trainName || "Chuyến tàu"}</h3>
 
-              {ticket.paidAt && (
-                <p>
-                  <strong>Thời gian thanh toán:</strong>{" "}
-                  {new Date(ticket.paidAt).toLocaleString("vi-VN")}
-                </p>
-              )}
+                      <p>
+                        <strong>Mã vé:</strong> <span style={{ fontWeight: "bold", color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</span>
+                      </p>
 
-              {ticket.vnpTxnRef && (
-                <p>
-                  <strong>Mã GD VNPay:</strong> {ticket.vnpTxnRef}
-                </p>
-              )}
+                      <div style={{ background: '#f5f9ff', padding: '10px', borderRadius: '6px', margin: '10px 0', border: '1px dashed #bee5eb' }}>
+                        <p style={{ margin: '0 0 5px 0', color: '#0c5460' }}>
+                          <strong>👤 KH:</strong> {ticket.passengerName || "Trống"}
+                        </p>
+                        <p style={{ margin: '0', color: '#0c5460', fontSize: '13px' }}>
+                          <strong>CCCD:</strong> {ticket.cccd || "Trống"} | <strong>Loại:</strong> {ticket.passengerType === 'child' ? 'Trẻ em' : ticket.passengerType === 'student' ? 'Sinh viên' : ticket.passengerType === 'senior' ? 'Người cao tuổi' : 'Người lớn'}
+                        </p>
+                      </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  marginTop: "12px",
-                  flexWrap: "wrap",
-                }}
-              >
-                {ticket.status !== "cancelled" && ticket.paymentStatus !== "paid" && (
-                  <button
-                    className="cancel-btn"
-                    onClick={() => handleVNPay(ticket._id)}
-                  >
-                    Thanh toán VNPay
-                  </button>
-                )}
+                      <p>
+                        <strong>Tuyến:</strong> {ticket.train?.from} → {ticket.train?.to}
+                      </p>
 
-                {ticket.status !== "cancelled" && ticket.paymentStatus === "paid" && (
-                  <button
-                    className="cancel-btn"
-                    style={{ background: "#c9503a", color: "#fff", border: "none" }}
-                    onClick={() => setSelectedTicket(ticket)}
-                  >
-                    🎟️ Xem vé điện tử
-                  </button>
-                )}
+                      <p>
+                        <strong>Trí:</strong> Toa {ticket.coachNumber} - Ghế {ticket.seatNumber}
+                      </p>
 
-                {ticket.status !== "cancelled" && (
-                  <button
-                    className="cancel-btn"
-                    onClick={() => handleCancelClick(ticket)}
-                  >
-                    Hủy vé
-                  </button>
-                )}
+                      <p>
+                        <strong>Khởi hành:</strong>{" "}
+                        {ticket.train?.departureTime || "Chưa có"} - {ticket.train?.departureDate ? new Date(ticket.train.departureDate).toLocaleDateString("vi-VN") : "Chưa có"}
+                      </p>
+
+                      {ticket.discountAmount > 0 ? (
+                        <div style={{ marginBottom: "10px", padding: "8px", backgroundColor: "#f9f9f9", borderRadius: "8px", border: "1px dashed #ccc" }}>
+                          <p style={{ margin: "4px 0" }}>
+                            <strong>Giá gốc:</strong>{" "}
+                            <span style={{ textDecoration: "line-through", color: "#888" }}>
+                              {(ticket.originalPrice || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
+                            </span>
+                          </p>
+                          <p style={{ margin: "4px 0", color: "#28a745" }}>
+                            <strong>Giảm giá:</strong> -{(ticket.discountAmount).toLocaleString("vi-VN")}đ
+                            {ticket.promotionCode && (
+                              <span style={{ backgroundColor: "#28a745", color: "white", padding: "2px 6px", borderRadius: "10px", fontSize: "11px", marginLeft: "6px" }}>
+                                {ticket.promotionCode}
+                              </span>
+                            )}
+                          </p>
+                          <p style={{ margin: "4px 0" }}>
+                            <strong>Thành tiền:</strong>{" "}
+                            <span style={{ color: "#d9534f", fontWeight: "bold", fontSize: "1.1em" }}>
+                              {(ticket.price || 0).toLocaleString("vi-VN")}đ
+                            </span>
+                          </p>
+                        </div>
+                      ) : (
+                        <p>
+                          <strong>Giá vé:</strong>{" "}
+                          <span style={{ color: "#d9534f", fontWeight: "bold", fontSize: "1.1em" }}>
+                            {(ticket.price || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
+                          </span>
+                        </p>
+                      )}
+
+                      <p style={{ marginTop: '10px' }}>
+                        <strong>TT:</strong> {renderPaymentText(ticket)}
+                      </p>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          marginTop: "12px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {ticket.status !== "cancelled" && ticket.paymentStatus !== "paid" && (
+                          <button
+                            className="cancel-btn"
+                            onClick={() => handleVNPay(ticket._id)}
+                          >
+                            Thanh toán lẻ
+                          </button>
+                        )}
+
+                        {ticket.status !== "cancelled" && ticket.paymentStatus === "paid" && (
+                          <button
+                            className="cancel-btn"
+                            style={{ background: "#c9503a", color: "#fff", border: "none" }}
+                            onClick={() => setSelectedTicket(ticket)}
+                          >
+                            🎟️ Xem vé điện tử
+                          </button>
+                        )}
+
+                        {ticket.status !== "cancelled" && (
+                          <button
+                            className="cancel-btn"
+                            onClick={() => handleCancelClick(ticket)}
+                          >
+                            Hủy vé
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Tích hợp Modal sinh E-Ticket */}
       {selectedTicket && (
-        <TicketQRCode 
-          ticket={selectedTicket} 
-          onClose={() => setSelectedTicket(null)} 
-          onPrint={handlePrint}
+        <TicketQRCode
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
         />
       )}
 
