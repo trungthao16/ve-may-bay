@@ -19,4 +19,8 @@ const trainSchema = new mongoose.Schema({
     coaches: [coachSchema]
 })
 
+// Index để tìm kiếm nhanh
+trainSchema.index({ from: 1, to: 1, departureDate: 1 });
+trainSchema.index({ departureDate: 1 });
+
 module.exports = mongoose.model("Train",trainSchema)

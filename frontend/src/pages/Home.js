@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import API from "../api/axios";
 import toast from "react-hot-toast";
 
 function Home() {
@@ -13,27 +14,19 @@ function Home() {
   const [passengers, setPassengers] = useState("1 người lớn");
   const [groupSize, setGroupSize] = useState("");
 
-  const stations = [
-    // Tuyến đường sắt Thống Nhất (Bắc - Nam)
-    "Hà Nội", "TP Hồ Chí Minh", "Phủ Lý", "Nam Định", "Ninh Bình", "Bỉm Sơn", "Thanh Hóa", "Minh Khôi",
-    "Chợ Sy", "Vinh", "Yên Trung", "Hương Phố", "Đồng Lê", "Đồng Hới", "Đông Hà",
-    "Huế", "Lăng Cô", "Đà Nẵng", "Trà Kiệu", "Phú Cang", "Tam Kỳ", "Núi Thành",
-    "Quảng Ngãi", "Đức Phổ", "Bồng Sơn", "Diêu Trì", "Tuy Hòa", "Giã", "Ninh Hòa",
-    "Nha Trang", "Ngã Ba", "Tháp Chàm", "Sông Mao", "Ma Lâm", "Bình Thuận",
-    "Suối Kiết", "Long Khánh", "Biên Hòa", "Dĩ An",
+  const [stations, setStations] = useState([]);
 
-    // Tuyến phía Bắc (Hà Nội - Lào Cai)
-    "Phủ Đức", "Việt Trì", "Vĩnh Yên", "Yên Bái", "Lào Cai",
-
-    // Tuyến phía Bắc (Hà Nội - Lạng Sơn)
-    "Bắc Giang", "Lạng Sơn", "Đồng Đăng",
-
-    // Tuyến phía Đông (Hà Nội - Hải Phòng)
-    "Gia Lâm", "Cẩm Giàng", "Hải Dương", "Phú Thái", "Hải Phòng",
-
-    // Tuyến phía Đông Bắc (Hà Nội - Thái Nguyên - Hạ Long)
-    "Thái Nguyên", "Uông Bí", "Hạ Long"
-  ];
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const res = await API.get("/trains/stations");
+        setStations(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("Lỗi lấy danh sách ga:", err);
+      }
+    };
+    fetchStations();
+  }, []);
 
   const swapStations = () => {
     const temp = from;

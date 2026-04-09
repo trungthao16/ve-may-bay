@@ -12,6 +12,18 @@ exports.getTrains = async (req, res) => {
   }
 };
 
+// lấy danh sách ga từ DB
+exports.getStations = async (req, res) => {
+  try {
+    const fromStations = await Train.distinct("from");
+    const toStations = await Train.distinct("to");
+    const allStations = [...new Set([...fromStations, ...toStations])].sort();
+    res.json(allStations);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // lấy chi tiết 1 tàu
 exports.getTrainById = async (req, res) => {
   try {
@@ -86,19 +98,40 @@ exports.searchTrains = async (req, res) => {
   try {
     const { from = "", to = "", date = "", tripType = "", groupSize = "" } = req.query;
 
-    let trains = await Train.find().lean(); // Use lean to easily add fields
+    // Build MongoDB query thay vì load hết rồi lọc bằng JS
+    const query = {};
 
-    // Lọc bỏ các chuyến tàu đã qua ngày khởi hành
-    const todayStr = new Date().toISOString().split("T")[0];
-    trains = trains.filter(train => {
-      if (!train.departureDate) return false;
-      const trainDateStr = new Date(train.departureDate).toISOString().split("T")[0];
-      return trainDateStr >= todayStr;
-    });
+    // Lọc theo ga đi / ga đến ngay trên DB
+    if (from) query.from = { $regex: from, $options: "i" };
+    if (to) query.to = { $regex: to, $options: "i" };
 
-    // Đếm số ghế đã đặt cho mỗi tàu
+    // Lọc theo ngày (xử lý timezone UTC+7)
+    if (date) {
+      const searchDate = new Date(date + "T00:00:00");
+      const nextDay = new Date(searchDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      // Trừ 7 tiếng để match UTC trong DB
+      const startUTC = new Date(searchDate.getTime() - 7 * 60 * 60 * 1000);
+      const endUTC = new Date(nextDay.getTime() - 7 * 60 * 60 * 1000);
+      query.departureDate = { $gte: startUTC, $lt: endUTC };
+    } else {
+      // Chỉ lấy chuyến tàu từ hôm nay trở đi
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayUTC = new Date(todayStart.getTime() - 7 * 60 * 60 * 1000);
+      query.departureDate = { $gte: todayUTC };
+    }
+
+    let trains = await Train.find(query)
+      .select("-coaches")
+      .sort({ departureDate: 1, departureTime: 1 })
+      .limit(50)
+      .lean();
+
+    // Đếm số ghế đã đặt cho mỗi tàu (chỉ cho trains đã lọc)
+    const trainIds = trains.map(t => t._id);
     const bookedCounts = await Ticket.aggregate([
-      { $match: { status: "booked" } },
+      { $match: { status: "booked", train: { $in: trainIds } } },
       { $group: { _id: "$train", count: { $sum: 1 } } }
     ]);
 
@@ -107,7 +140,7 @@ exports.searchTrains = async (req, res) => {
       bookedMap[b._id.toString()] = b.count;
     });
 
-    // Thêm trường availableSeats vào dữ liệu tàu
+    // Thêm trường availableSeats
     trains = trains.map(train => {
       const booked = bookedMap[train._id.toString()] || 0;
       const total = train.totalSeats || train.seats || 0;
@@ -117,30 +150,6 @@ exports.searchTrains = async (req, res) => {
         availableSeats: Math.max(total - booked, 0)
       };
     });
-
-    if (from) {
-      trains = trains.filter((train) =>
-        train.from?.toLowerCase().includes(from.toLowerCase())
-      );
-    }
-
-    if (to) {
-      trains = trains.filter((train) =>
-        train.to?.toLowerCase().includes(to.toLowerCase())
-      );
-    }
-
-    if (date) {
-      trains = trains.filter((train) => {
-        if (!train.departureDate) return false;
-
-        const trainDate = new Date(train.departureDate)
-          .toISOString()
-          .split("T")[0];
-
-        return trainDate === date;
-      });
-    }
 
     if (tripType === "group" && groupSize) {
       const groupNumber = parseInt(groupSize, 10);

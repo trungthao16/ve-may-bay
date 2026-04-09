@@ -69,10 +69,8 @@ async function seedData() {
       const departureDate = new Date(startDate);
       departureDate.setDate(departureDate.getDate() + dayOffset);
 
-      // Chọn random 2-3 tuyến mỗi ngày để đạt ~500-600 chuyến
-      const numRoutes = Math.random() < 0.5 ? 2 : 3;
-      const shuffled = [...ROUTE_PAIRS].sort(() => Math.random() - 0.5);
-      const selectedRoutes = shuffled.slice(0, numRoutes);
+      // Tất cả tuyến đều có tàu mỗi ngày
+      const selectedRoutes = ROUTE_PAIRS;
 
       for (const route of selectedRoutes) {
         // --- CHIỀU ĐI (City 1 -> City 2) ---

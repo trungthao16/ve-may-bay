@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
@@ -30,27 +30,34 @@ function TrainList() {
   const [selectedOutbound, setSelectedOutbound] = useState(null);
   const [selectedReturn, setSelectedReturn] = useState(null);
 
-  const stations = [
-    // Tuyến đường sắt Thống Nhất (Bắc - Nam)
-    "Hà Nội", "TP Hồ Chí Minh", "Phủ Lý", "Nam Định", "Ninh Bình", "Bỉm Sơn", "Thanh Hóa", "Minh Khôi",
-    "Chợ Sy", "Vinh", "Yên Trung", "Hương Phố", "Đồng Lê", "Đồng Hới", "Đông Hà",
-    "Huế", "Lăng Cô", "Đà Nẵng", "Trà Kiệu", "Phú Cang", "Tam Kỳ", "Núi Thành",
-    "Quảng Ngãi", "Đức Phổ", "Bồng Sơn", "Diêu Trì", "Tuy Hòa", "Giã", "Ninh Hòa",
-    "Nha Trang", "Ngã Ba", "Tháp Chàm", "Sông Mao", "Ma Lâm", "Bình Thuận",
-    "Suối Kiết", "Long Khánh", "Biên Hòa", "Dĩ An",
+  const [stations, setStations] = useState([]);
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const fromRef = useRef(null);
+  const toRef = useRef(null);
 
-    // Tuyến phía Bắc (Hà Nội - Lào Cai)
-    "Phủ Đức", "Việt Trì", "Vĩnh Yên", "Yên Bái", "Lào Cai",
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (fromRef.current && !fromRef.current.contains(e.target)) setShowFromDropdown(false);
+      if (toRef.current && !toRef.current.contains(e.target)) setShowToDropdown(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    // Tuyến phía Bắc (Hà Nội - Lạng Sơn)
-    "Bắc Giang", "Lạng Sơn", "Đồng Đăng",
-
-    // Tuyến phía Đông (Hà Nội - Hải Phòng)
-    "Gia Lâm", "Cẩm Giàng", "Hải Dương", "Phú Thái", "Hải Phòng",
-
-    // Tuyến phía Đông Bắc (Hà Nội - Thái Nguyên - Hạ Long)
-    "Thái Nguyên", "Uông Bí", "Hạ Long"
-  ];
+  // Fetch danh sách ga từ DB
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const res = await API.get("/trains/stations");
+        setStations(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("Lỗi lấy danh sách ga:", err);
+      }
+    };
+    fetchStations();
+  }, []);
 
   useEffect(() => {
     const fetchTrains = async () => {
@@ -254,9 +261,6 @@ function TrainList() {
 
   return (
     <div className="trainlist-page">
-      <datalist id="station-list">
-        {stations.map((s) => <option key={s} value={s} />)}
-      </datalist>
 
       <div className="rv-container trainlist-wrap">
         <div className="search-box" style={{ marginBottom: "40px" }}>
@@ -283,9 +287,34 @@ function TrainList() {
               </select>
             </div>
 
-            <div className="field">
+            <div className="field" ref={fromRef} style={{ position: 'relative' }}>
               <label>Ga đi</label>
-              <input type="text" list="station-list" value={searchFrom} onChange={(e) => setSearchFrom(e.target.value)} placeholder="Nhập ga đi..." />
+              <input
+                type="text"
+                value={searchFrom}
+                onChange={(e) => { setSearchFrom(e.target.value); setShowFromDropdown(true); }}
+                onFocus={() => setShowFromDropdown(true)}
+                placeholder="Nhập hoặc chọn ga đi..."
+                autoComplete="off"
+              />
+              {showFromDropdown && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '0 0 8px 8px', maxHeight: '200px', overflowY: 'auto', zIndex: 999, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                  {stations.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).map(s => (
+                    <div
+                      key={s}
+                      onClick={() => { setSearchFrom(s); setShowFromDropdown(false); }}
+                      style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f0f0f0' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f5f0eb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                    >
+                      {s}
+                    </div>
+                  ))}
+                  {stations.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy ga phù hợp</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <button
@@ -298,9 +327,34 @@ function TrainList() {
               ⇄
             </button>
 
-            <div className="field">
+            <div className="field" ref={toRef} style={{ position: 'relative' }}>
               <label>Ga đến</label>
-              <input type="text" list="station-list" value={searchTo} onChange={(e) => setSearchTo(e.target.value)} placeholder="Nhập ga đến..." />
+              <input
+                type="text"
+                value={searchTo}
+                onChange={(e) => { setSearchTo(e.target.value); setShowToDropdown(true); }}
+                onFocus={() => setShowToDropdown(true)}
+                placeholder="Nhập hoặc chọn ga đến..."
+                autoComplete="off"
+              />
+              {showToDropdown && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '0 0 8px 8px', maxHeight: '200px', overflowY: 'auto', zIndex: 999, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                  {stations.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).map(s => (
+                    <div
+                      key={s}
+                      onClick={() => { setSearchTo(s); setShowToDropdown(false); }}
+                      style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f0f0f0' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f5f0eb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                    >
+                      {s}
+                    </div>
+                  ))}
+                  {stations.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy ga phù hợp</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="field">

@@ -24,6 +24,7 @@ const { protect } = require("../middleware/authMiddleware");
 const { isAdmin } = require("../middleware/roleMiddleware");
 
 router.get("/", trainController.getTrains);
+router.get("/stations", trainController.getStations);
 router.get("/search", trainController.searchTrains);
 router.get("/:id", trainController.getTrainById);
 router.get("/:trainId/booked-seats", trainController.getBookedSeats);
