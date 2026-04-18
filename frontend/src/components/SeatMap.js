@@ -3,9 +3,9 @@ import API from "../api/axios";
 import toast from "react-hot-toast";
 
 function SeatMap({ flight, onSeatSelect }) {
-  const [activeCoach, setActiveCoach] = useState(0);
+  const [activeCabin, setActiveCabin] = useState(0);
   const [bookedSeats, setBookedSeats] = useState([]);
-  const [selectedSeats, setSelectedSeats] = useState([]); // Array: [{ coachNumber, seatNumber, extraPrice }]
+  const [selectedSeats, setSelectedSeats] = useState([]); // Array: [{ cabinNumber, seatNumber, extraPrice }]
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,11 +24,11 @@ function SeatMap({ flight, onSeatSelect }) {
     fetchBookedSeats();
   }, [flight]);
 
-  if (!flight || !flight.coaches || flight.coaches.length === 0) {
+  if (!flight || !flight.cabins || flight.cabins.length === 0) {
     return <div className="seat-map-empty">Chuyến bay này chưa được thiết lập khoang.</div>;
   }
 
-  const currentCoach = flight.coaches[activeCoach];
+  const currentCabin = flight.cabins[activeCabin];
 
   const userString = localStorage.getItem("user");
   const currentUser = userString ? JSON.parse(userString) : null;
@@ -37,7 +37,7 @@ function SeatMap({ flight, onSeatSelect }) {
   const isSeatBooked = (seatNum) => {
     return bookedSeats.some(
       (s) => 
-        s.coachNumber === currentCoach.coachNumber && 
+        s.cabinNumber === currentCabin.cabinNumber && 
         s.seatNumber === seatNum.toString() &&
         !s.isLocked
     );
@@ -47,7 +47,7 @@ function SeatMap({ flight, onSeatSelect }) {
   const isSeatLocked = (seatNum) => {
     return bookedSeats.some(
       (s) => 
-        s.coachNumber === currentCoach.coachNumber && 
+        s.cabinNumber === currentCabin.cabinNumber && 
         s.seatNumber === seatNum.toString() &&
         s.isLocked &&
         s.lockedBy !== currentUser?._id
@@ -56,7 +56,7 @@ function SeatMap({ flight, onSeatSelect }) {
 
   const isSeatSelected = (seatNum) => {
     return selectedSeats.some(
-      (s) => s.coachNumber === currentCoach.coachNumber && s.seatNumber === seatNum.toString()
+      (s) => s.cabinNumber === currentCabin.cabinNumber && s.seatNumber === seatNum.toString()
     );
   };
 
@@ -69,27 +69,27 @@ function SeatMap({ flight, onSeatSelect }) {
     if (isAlreadySelected) {
       // Bỏ chọn
       const newSelected = selectedSeats.filter(
-        (s) => !(s.coachNumber === currentCoach.coachNumber && s.seatNumber === seatStr)
+        (s) => !(s.cabinNumber === currentCabin.cabinNumber && s.seatNumber === seatStr)
       );
       setSelectedSeats(newSelected);
       onSeatSelect(newSelected);
       
       // Optional: Unlock on server if you want
-      // await API.post(`/flights/${flight._id}/unlock-seat`, { coachNumber: currentCoach.coachNumber, seatNumber: seatStr });
+      // await API.post(`/flights/${flight._id}/unlock-seat`, { cabinNumber: currentCabin.cabinNumber, seatNumber: seatStr });
     } else {
       // Chọn mới
       try {
         await API.post(`/flights/${flight._id}/lock-seat`, { 
-          coachNumber: currentCoach.coachNumber, 
+          cabinNumber: currentCabin.cabinNumber, 
           seatNumber: seatStr 
         });
         
-        const extraPrice = Number(flight.price) * (currentCoach.priceMultiplier - 1);
+        const extraPrice = Number(flight.price) * (currentCabin.priceMultiplier - 1);
         const newSeat = {
-          coachNumber: currentCoach.coachNumber,
+          cabinNumber: currentCabin.cabinNumber,
           seatNumber: seatStr,
           extraPrice: extraPrice,
-          coachType: currentCoach.coachType
+          cabinType: currentCabin.cabinType
         };
         
         const newSelected = [...selectedSeats, newSeat];
@@ -108,9 +108,9 @@ function SeatMap({ flight, onSeatSelect }) {
 
   const renderSeats = () => {
     const seats = [];
-    const capacity = currentCoach.capacity;
+    const capacity = currentCabin.capacity;
     
-    if (currentCoach.coachType === "soft_seat") {
+    if (currentCabin.cabinType === "economy") {
       for (let i = 1; i <= capacity; i++) {
         const booked = isSeatBooked(i);
         const locked = isSeatLocked(i);
@@ -128,7 +128,7 @@ function SeatMap({ flight, onSeatSelect }) {
         );
       }
       return <div className="seat-grid soft-seat">{seats}</div>;
-    } else if (currentCoach.coachType === "sleeper") {
+    } else if (currentCabin.cabinType === "business") {
       const bedsPerCabin = capacity > 30 ? 6 : 4;
       const totalCabins = Math.ceil(capacity / bedsPerCabin);
       
@@ -173,15 +173,15 @@ function SeatMap({ flight, onSeatSelect }) {
       <h3>Chọn Khoang & Chỗ (Bạn có thể chọn nhiều chỗ)</h3>
       
       <div className="coach-selector">
-        {flight.coaches.map((coach, index) => (
+        {flight.cabins.map((cabin, index) => (
           <button 
-            key={coach._id || index}
+            key={cabin._id || index}
             type="button"
-            className={`coach-btn ${activeCoach === index ? 'active' : ''}`}
-            onClick={() => setActiveCoach(index)}
+            className={`coach-btn ${activeCabin === index ? 'active' : ''}`}
+            onClick={() => setActiveCabin(index)}
           >
-            Khoang {coach.coachNumber} <br/>
-            <small>{coach.coachType === "soft_seat" ? "Hạng Phổ Thông" : "Hạng Thương Gia"}</small>
+            Khoang {cabin.cabinNumber} <br/>
+            <small>{cabin.cabinType === "economy" ? "Hạng Phổ Thông" : "Hạng Thương Gia"}</small>
           </button>
         ))}
       </div>

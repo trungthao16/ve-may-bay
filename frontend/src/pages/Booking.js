@@ -131,7 +131,7 @@ function Booking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTrainId = searchParams.get("returnTrainId");
+  const returnFlightId = searchParams.get("returnFlightId");
 
   const [flight, setFlight] = useState(null);
   const [returnFlight, setReturnFlight] = useState(null);
@@ -149,7 +149,7 @@ function Booking() {
   const [activePromotions, setActivePromotions] = useState([]);
   const [showPromos, setShowPromos] = useState(false);
 
-  const isRoundTrip = !!returnTrainId;
+  const isRoundTrip = !!returnFlightId;
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -165,9 +165,9 @@ function Booking() {
     };
 
     const fetchReturnFlight = async () => {
-      if (!returnTrainId) return;
+      if (!returnFlightId) return;
       try {
-        const res = await API.get(`/flights/${returnTrainId}`);
+        const res = await API.get(`/flights/${returnFlightId}`);
         setReturnFlight(res.data);
       } catch (error) {
         console.error("Lỗi lấy chi tiết chuyến bay chiều về:", error);
@@ -186,18 +186,18 @@ function Booking() {
     fetchFlight();
     fetchReturnFlight();
     fetchPromotions();
-  }, [id, returnTrainId]);
+  }, [id, returnFlightId]);
 
   const handleSeatSelect = (selectedSeats) => {
     setPassengers((prev) => {
       const newPassengers = selectedSeats.map((seat) => {
         const existing = prev.find(
-          (p) => p.coachNumber === seat.coachNumber && p.seatNumber === seat.seatNumber
+          (p) => p.cabinNumber === seat.cabinNumber && p.seatNumber === seat.seatNumber
         );
         if (existing) return existing;
         const isFirstAndEmpty = prev.length === 0 && user?.name;
         return {
-          coachNumber: seat.coachNumber,
+          cabinNumber: seat.cabinNumber,
           seatNumber: seat.seatNumber,
           extraPrice: seat.extraPrice,
           passengerName: isFirstAndEmpty ? user.name : "",
@@ -215,14 +215,14 @@ function Booking() {
     setReturnPassengers((prev) => {
       const newPassengers = selectedSeats.map((seat) => {
         const existing = prev.find(
-          (p) => p.coachNumber === seat.coachNumber && p.seatNumber === seat.seatNumber
+          (p) => p.cabinNumber === seat.cabinNumber && p.seatNumber === seat.seatNumber
         );
         if (existing) return existing;
         // Auto-fill from outbound passengers if same index exists
         const idx = selectedSeats.indexOf(seat);
         const outP = passengers[idx];
         return {
-          coachNumber: seat.coachNumber,
+          cabinNumber: seat.cabinNumber,
           seatNumber: seat.seatNumber,
           extraPrice: seat.extraPrice,
           passengerName: outP?.passengerName || "",
@@ -246,9 +246,6 @@ function Booking() {
     setPassengers(updated);
   };
 
-  const totalPriceBeforeVoucher = passengers.reduce((sum, p) => sum + calculateFlightPrice(p), 0);
-  const finalPrice = Math.max(totalPriceBeforeVoucher - discountAmount, 0);
-
   const calculateFlightPrice = (p) => {
     const base = Number(flight.price) + p.extraPrice;
     let rate = 0;
@@ -257,6 +254,9 @@ function Booking() {
     else if (p.passengerType === "senior") rate = 0.15;
     return base * (1 - rate);
   };
+
+  const totalPriceBeforeVoucher = passengers.reduce((sum, p) => sum + calculateFlightPrice(p), 0);
+  const finalPrice = Math.max(totalPriceBeforeVoucher - discountAmount, 0);
 
   const handleApplyPromotion = async (codeToApply = null) => {
     const code = typeof codeToApply === "string" ? codeToApply : promoCode;
@@ -329,7 +329,7 @@ function Booking() {
           name: p.passengerName,
           cccd: p.cccd,
           type: p.passengerType,
-          coachNumber: p.coachNumber,
+          cabinNumber: p.cabinNumber,
           seatNumber: p.seatNumber
         })),
         promotionCode: appliedPromotion?.code || "",
@@ -345,12 +345,12 @@ function Booking() {
         toast.success(`Chiều đi: ${resGo.data.message}`);
 
         const payloadReturn = {
-          flightId: returnTrainId,
+          flightId: returnFlightId,
           passengers: returnPassengers.map(p => ({
             name: p.passengerName,
             cccd: p.cccd,
             type: p.passengerType,
-            coachNumber: p.coachNumber,
+            cabinNumber: p.cabinNumber,
             seatNumber: p.seatNumber
           })),
           promotionCode: appliedPromotion?.code || "",
@@ -449,7 +449,7 @@ function Booking() {
                 }}
               >
                 {activePassengers.length > 0 
-                  ? activePassengers.map(p => `Khoang ${p.coachNumber} - Ghế ${p.seatNumber}`).join(" | ")
+                  ? activePassengers.map(p => `Khoang ${p.cabinNumber} - Ghế ${p.seatNumber}`).join(" | ")
                   : "Chưa chọn chỗ (Vui lòng click vào sơ đồ)"}
               </div>
 
@@ -464,9 +464,9 @@ function Booking() {
                     const pDiscount = Math.round(base * rate);
                     
                     return (
-                      <div key={`${p.coachNumber}-${p.seatNumber}`} className="passenger-info-section" style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #ddd", marginBottom: "20px" }}>
+                      <div key={`${p.cabinNumber}-${p.seatNumber}`} className="passenger-info-section" style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #ddd", marginBottom: "20px" }}>
                         <h4 style={{ margin: "0 0 15px 0", color: "#333", borderBottom: "1px solid #eee", paddingBottom: "10px" }}>
-                          👤 Hành khách #{index + 1} - Khoang {p.coachNumber} Chỗ {p.seatNumber}
+                          👤 Hành khách #{index + 1} - Khoang {p.cabinNumber} Chỗ {p.seatNumber}
                           <span style={{ fontSize: '13px', color: '#666', marginLeft: '10px', fontWeight: 'normal' }}>
                             ({p.extraPrice > 0 ? `+${p.extraPrice.toLocaleString()}đ phí khoang` : 'Giá gốc'})
                           </span>

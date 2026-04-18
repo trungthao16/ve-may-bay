@@ -505,7 +505,7 @@ function FlightList() {
             style={{ opacity: (!selectedOutbound || !selectedReturn) ? 0.6 : 1, padding: '12px 30px', fontSize: '16px' }}
             onClick={() => {
               if (selectedOutbound && selectedReturn) {
-                navigate(`/booking/${selectedOutbound}?returnTrainId=${selectedReturn}`);
+                navigate(`/booking/${selectedOutbound}?returnFlightId=${selectedReturn}`);
               }
             }}
           >
