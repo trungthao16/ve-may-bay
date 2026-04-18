@@ -40,7 +40,7 @@ function Promotions() {
         <div className="promotions-header">
           <h1 className="promotions-title">Khuyến mãi</h1>
           <p className="promotions-sub">
-            Cập nhật những ưu đãi mới nhất cho hành trình tàu của bạn
+            Cập nhật những ưu đãi mới nhất cho hành trình bay của bạn
           </p>
         </div>
 

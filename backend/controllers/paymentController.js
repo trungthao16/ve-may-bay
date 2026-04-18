@@ -48,7 +48,7 @@ exports.createVNPayPayment = async (req, res) => {
       return res.status(400).json({ message: "Thiếu ticketId(s)" });
     }
 
-    const tickets = await Ticket.find({ _id: { $in: idsToPay } }).populate("train");
+    const tickets = await Ticket.find({ _id: { $in: idsToPay } }).populate("flight");
     if (tickets.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy vé" });
     }

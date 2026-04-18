@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import API from "../api/axios";
 import toast from "react-hot-toast";
 
-function SeatMap({ train, onSeatSelect }) {
+function SeatMap({ flight, onSeatSelect }) {
   const [activeCoach, setActiveCoach] = useState(0);
   const [bookedSeats, setBookedSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]); // Array: [{ coachNumber, seatNumber, extraPrice }]
@@ -10,10 +10,10 @@ function SeatMap({ train, onSeatSelect }) {
 
   useEffect(() => {
     const fetchBookedSeats = async () => {
-      if (!train || !train._id) return;
+      if (!flight || !flight._id) return;
       try {
         setLoading(true);
-        const res = await API.get(`/trains/${train._id}/booked-seats`);
+        const res = await API.get(`/flights/${flight._id}/booked-seats`);
         setBookedSeats(res.data);
       } catch (err) {
         console.error("Lỗi tải thông tin ghế:", err);
@@ -22,13 +22,13 @@ function SeatMap({ train, onSeatSelect }) {
       }
     };
     fetchBookedSeats();
-  }, [train]);
+  }, [flight]);
 
-  if (!train || !train.coaches || train.coaches.length === 0) {
-    return <div className="seat-map-empty">Chuyến tàu này chưa được thiết lập toa.</div>;
+  if (!flight || !flight.coaches || flight.coaches.length === 0) {
+    return <div className="seat-map-empty">Chuyến bay này chưa được thiết lập khoang.</div>;
   }
 
-  const currentCoach = train.coaches[activeCoach];
+  const currentCoach = flight.coaches[activeCoach];
 
   const userString = localStorage.getItem("user");
   const currentUser = userString ? JSON.parse(userString) : null;
@@ -75,16 +75,16 @@ function SeatMap({ train, onSeatSelect }) {
       onSeatSelect(newSelected);
       
       // Optional: Unlock on server if you want
-      // await API.post(`/trains/${train._id}/unlock-seat`, { coachNumber: currentCoach.coachNumber, seatNumber: seatStr });
+      // await API.post(`/flights/${flight._id}/unlock-seat`, { coachNumber: currentCoach.coachNumber, seatNumber: seatStr });
     } else {
       // Chọn mới
       try {
-        await API.post(`/trains/${train._id}/lock-seat`, { 
+        await API.post(`/flights/${flight._id}/lock-seat`, { 
           coachNumber: currentCoach.coachNumber, 
           seatNumber: seatStr 
         });
         
-        const extraPrice = Number(train.price) * (currentCoach.priceMultiplier - 1);
+        const extraPrice = Number(flight.price) * (currentCoach.priceMultiplier - 1);
         const newSeat = {
           coachNumber: currentCoach.coachNumber,
           seatNumber: seatStr,
@@ -99,7 +99,7 @@ function SeatMap({ train, onSeatSelect }) {
         toast.error(err.response?.data?.message || "Không thể giữ chỗ");
         // Reload seat map
         try {
-          const res = await API.get(`/trains/${train._id}/booked-seats`);
+          const res = await API.get(`/flights/${flight._id}/booked-seats`);
           setBookedSeats(res.data);
         } catch (e) {}
       }
@@ -148,7 +148,7 @@ function SeatMap({ train, onSeatSelect }) {
               key={seatNum} 
               className={`seat-item sleeper ${booked ? 'booked' : ''} ${locked ? 'locked' : ''} ${selected ? 'selected' : ''}`}
               onClick={() => handleSeatClick(seatNum)}
-              title={booked ? "Đã đặt" : locked ? "Đang thanh toán" : `Giường ${seatNum}`}
+              title={booked ? "Đã đặt" : locked ? "Đang thanh toán" : `Chỗ ${seatNum}`}
             >
               {seatNum}
             </div>
@@ -170,18 +170,18 @@ function SeatMap({ train, onSeatSelect }) {
 
   return (
     <div className="seat-map-container">
-      <h3>Chọn Toa & Ghế (Bạn có thể chọn nhiều ghế)</h3>
+      <h3>Chọn Khoang & Chỗ (Bạn có thể chọn nhiều chỗ)</h3>
       
       <div className="coach-selector">
-        {train.coaches.map((coach, index) => (
+        {flight.coaches.map((coach, index) => (
           <button 
             key={coach._id || index}
             type="button"
             className={`coach-btn ${activeCoach === index ? 'active' : ''}`}
             onClick={() => setActiveCoach(index)}
           >
-            Toa {coach.coachNumber} <br/>
-            <small>{coach.coachType === "soft_seat" ? "Ngồi mềm" : "Giường nằm"}</small>
+            Khoang {coach.coachNumber} <br/>
+            <small>{coach.coachType === "soft_seat" ? "Hạng Phổ Thông" : "Hạng Thương Gia"}</small>
           </button>
         ))}
       </div>
@@ -194,10 +194,10 @@ function SeatMap({ train, onSeatSelect }) {
       </div>
 
       {loading ? (
-        <div className="seat-loading">Đang tải sơ đồ toa...</div>
+        <div className="seat-loading">Đang tải sơ đồ khoang...</div>
       ) : (
         <div className="seat-map-view">
-          <div className="train-head-placeholder">Phần đầu tàu ⮜</div>
+          <div className="train-head-placeholder">Phần đầu máy bay ✈</div>
           {renderSeats()}
         </div>
       )}

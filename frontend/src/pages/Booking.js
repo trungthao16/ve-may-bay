@@ -13,11 +13,11 @@
 //   useEffect(() => {
 //     const fetchTrain = async () => {
 //       try {
-//         const res = await API.get(`/trains/${id}`);
+//         const res = await API.get(`/flights/${id}`);
 //         setTrain(res.data);
 //       } catch (error) {
-//         console.error("Lỗi lấy chi tiết tàu:", error);
-//         alert("Không tải được thông tin chuyến tàu");
+//         console.error("Lỗi lấy chi tiết chuyến bay:", error);
+//         alert("Không tải được thông tin chuyến bay");
 //       }
 //     };
 
@@ -133,8 +133,8 @@ function Booking() {
   const [searchParams] = useSearchParams();
   const returnTrainId = searchParams.get("returnTrainId");
 
-  const [train, setTrain] = useState(null);
-  const [returnTrain, setReturnTrain] = useState(null);
+  const [flight, setFlight] = useState(null);
+  const [returnFlight, setReturnFlight] = useState(null);
   const [passengers, setPassengers] = useState([]);
   const [returnPassengers, setReturnPassengers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -154,23 +154,23 @@ function Booking() {
   const user = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
-    const fetchTrain = async () => {
+    const fetchFlight = async () => {
       try {
-        const res = await API.get(`/trains/${id}`);
-        setTrain(res.data);
+        const res = await API.get(`/flights/${id}`);
+        setFlight(res.data);
       } catch (error) {
-        console.error("Lỗi lấy chi tiết tàu:", error);
-        toast.error("Định tuyến không tải được, vui lòng thử lại");
+        console.error("Lỗi lấy chi tiết chuyến bay:", error);
+        toast.error("Không tải được chi tiết chuyến bay, vui lòng thử lại");
       }
     };
 
-    const fetchReturnTrain = async () => {
+    const fetchReturnFlight = async () => {
       if (!returnTrainId) return;
       try {
-        const res = await API.get(`/trains/${returnTrainId}`);
-        setReturnTrain(res.data);
+        const res = await API.get(`/flights/${returnTrainId}`);
+        setReturnFlight(res.data);
       } catch (error) {
-        console.error("Lỗi lấy chi tiết tàu chiều về:", error);
+        console.error("Lỗi lấy chi tiết chuyến bay chiều về:", error);
       }
     };
 
@@ -183,8 +183,8 @@ function Booking() {
       }
     };
 
-    fetchTrain();
-    fetchReturnTrain();
+    fetchFlight();
+    fetchReturnFlight();
     fetchPromotions();
   }, [id, returnTrainId]);
 
@@ -246,18 +246,17 @@ function Booking() {
     setPassengers(updated);
   };
 
-  // Calculate total price
-  const calculatePassengerPrice = (p) => {
-    const base = Number(train.price) + p.extraPrice;
+  const totalPriceBeforeVoucher = passengers.reduce((sum, p) => sum + calculateFlightPrice(p), 0);
+  const finalPrice = Math.max(totalPriceBeforeVoucher - discountAmount, 0);
+
+  const calculateFlightPrice = (p) => {
+    const base = Number(flight.price) + p.extraPrice;
     let rate = 0;
     if (p.passengerType === "child") rate = 0.25;
     else if (p.passengerType === "student") rate = 0.10;
     else if (p.passengerType === "senior") rate = 0.15;
     return base * (1 - rate);
   };
-
-  const totalPriceBeforeVoucher = passengers.reduce((sum, p) => sum + calculatePassengerPrice(p), 0);
-  const finalPrice = Math.max(totalPriceBeforeVoucher - discountAmount, 0);
 
   const handleApplyPromotion = async (codeToApply = null) => {
     const code = typeof codeToApply === "string" ? codeToApply : promoCode;
@@ -295,7 +294,7 @@ function Booking() {
     // If roundtrip and still at step 1, go to step 2
     if (isRoundTrip && bookingStep === 1) {
       if (passengers.length === 0) {
-        toast.error("Vui lòng chọn ghế chiều đi");
+        toast.error("Vui lòng chọn chỗ chiều đi");
         return;
       }
       const invalid = passengers.find(p => !p.passengerName.trim() || !p.cccd.trim());
@@ -311,7 +310,7 @@ function Booking() {
     // Validate current step passengers
     const currentPassengers = isRoundTrip && bookingStep === 2 ? returnPassengers : passengers;
     if (currentPassengers.length === 0) {
-      toast.error(isRoundTrip ? "Vui lòng chọn ghế chiều về" : "Vui lòng chọn ghế trên sơ đồ");
+      toast.error(isRoundTrip ? "Vui lòng chọn chỗ chiều về" : "Vui lòng chọn chỗ trên sơ đồ");
       return;
     }
     const invalid = currentPassengers.find(p => !p.passengerName.trim() || !p.cccd.trim());
@@ -325,7 +324,7 @@ function Booking() {
 
       // Book outbound
       const payloadGo = {
-        trainId: id,
+        flightId: id,
         passengers: passengers.map(p => ({
           name: p.passengerName,
           cccd: p.cccd,
@@ -346,7 +345,7 @@ function Booking() {
         toast.success(`Chiều đi: ${resGo.data.message}`);
 
         const payloadReturn = {
-          trainId: returnTrainId,
+          flightId: returnTrainId,
           passengers: returnPassengers.map(p => ({
             name: p.passengerName,
             cccd: p.cccd,
@@ -369,9 +368,9 @@ function Booking() {
     }
   };
 
-  if (!train) return <div className="rv-container">Đang tải...</div>;
+  if (!flight) return <div className="rv-container">Đang tải...</div>;
 
-  const activeTrain = isRoundTrip && bookingStep === 2 && returnTrain ? returnTrain : train;
+  const activeFlight = isRoundTrip && bookingStep === 2 && returnFlight ? returnFlight : flight;
   const activePassengers = isRoundTrip && bookingStep === 2 ? returnPassengers : passengers;
   const activeHandleSeatSelect = isRoundTrip && bookingStep === 2 ? handleReturnSeatSelect : handleSeatSelect;
   const activeUpdatePassenger = isRoundTrip && bookingStep === 2 ? updateReturnPassengerInfo : updatePassengerInfo;
@@ -386,45 +385,45 @@ function Booking() {
               onClick={() => setBookingStep(1)}
               style={{ flex: 1, background: 'transparent', border: 'none', padding: '14px 20px', fontSize: '17px', fontWeight: 'bold', cursor: 'pointer', borderBottom: bookingStep === 1 ? '3px solid #c9503a' : '3px solid transparent', color: bookingStep === 1 ? '#c9503a' : '#888', transition: '0.2s' }}
             >
-              Bước 1: Chiều đi ({train.from} → {train.to})
-              {passengers.length > 0 && <span style={{ marginLeft: '8px', background: '#dff4e3', color: '#247046', padding: '2px 8px', borderRadius: '10px', fontSize: '12px' }}>✓ {passengers.length} ghế</span>}
+              Bước 1: Chiều đi ({flight.from} → {flight.to})
+              {passengers.length > 0 && <span style={{ marginLeft: '8px', background: '#dff4e3', color: '#247046', padding: '2px 8px', borderRadius: '10px', fontSize: '12px' }}>✓ {passengers.length} chỗ</span>}
             </button>
             <button
-              onClick={() => { if (passengers.length > 0) setBookingStep(2); else toast.error('Vui lòng chọn ghế chiều đi trước'); }}
+              onClick={() => { if (passengers.length > 0) setBookingStep(2); else toast.error('Vui lòng chọn chỗ chiều đi trước'); }}
               style={{ flex: 1, background: 'transparent', border: 'none', padding: '14px 20px', fontSize: '17px', fontWeight: 'bold', cursor: 'pointer', borderBottom: bookingStep === 2 ? '3px solid #c9503a' : '3px solid transparent', color: bookingStep === 2 ? '#c9503a' : '#888', transition: '0.2s' }}
             >
-              Bước 2: Chiều về ({returnTrain?.from || '...'} → {returnTrain?.to || '...'})
-              {returnPassengers.length > 0 && <span style={{ marginLeft: '8px', background: '#dff4e3', color: '#247046', padding: '2px 8px', borderRadius: '10px', fontSize: '12px' }}>✓ {returnPassengers.length} ghế</span>}
+              Bước 2: Chiều về ({returnFlight?.from || '...'} → {returnFlight?.to || '...'})
+              {returnPassengers.length > 0 && <span style={{ marginLeft: '8px', background: '#dff4e3', color: '#247046', padding: '2px 8px', borderRadius: '10px', fontSize: '12px' }}>✓ {returnPassengers.length} chỗ</span>}
             </button>
           </div>
         )}
 
         <div className="booking-card">
           <div className="booking-left">
-            <h1 className="booking-title">{activeTrain.trainName || "Chuyến tàu"}</h1>
+            <h1 className="booking-title">{activeFlight.flightNumber || "Chuyến bay"}</h1>
             <div className="booking-route">
-              {activeTrain.from} → {activeTrain.to}
+              {activeFlight.from} → {activeFlight.to}
             </div>
 
             <div className="booking-info-grid">
               <div className="info-item">
                 <span>Khởi hành</span>
-                <strong>{activeTrain.departureTime}</strong>
+                <strong>{activeFlight.departureTime}</strong>
               </div>
 
               <div className="info-item">
-                <span>Đến nơi</span>
-                <strong>{activeTrain.arrivalTime}</strong>
+                <span>Hạ cánh</span>
+                <strong>{activeFlight.arrivalTime}</strong>
               </div>
 
               <div className="info-item">
                 <span>Giá vé</span>
-                <strong>{Number(activeTrain.price).toLocaleString("vi-VN")}đ</strong>
+                <strong>{Number(activeFlight.price).toLocaleString("vi-VN")}đ</strong>
               </div>
 
               <div className="info-item">
-                <span>Tổng ghế</span>
-                <strong>{activeTrain.totalSeats}</strong>
+                <span>Tổng chỗ</span>
+                <strong>{activeFlight.totalSeats}</strong>
               </div>
             </div>
           </div>
@@ -433,11 +432,11 @@ function Booking() {
             <h3>Thông tin đặt vé</h3>
 
             <div style={{ marginBottom: "20px" }}>
-              <SeatMap train={activeTrain} onSeatSelect={activeHandleSeatSelect} key={activeTrain._id} />
+              <SeatMap flight={activeFlight} onSeatSelect={activeHandleSeatSelect} key={activeFlight._id} />
             </div>
 
             <form onSubmit={handleBooking}>
-              <label>Ghế đã chọn</label>
+              <label>Chỗ đã chọn</label>
               <div
                 style={{
                   padding: "12px",
@@ -450,14 +449,14 @@ function Booking() {
                 }}
               >
                 {activePassengers.length > 0 
-                  ? activePassengers.map(p => `Toa số ${p.coachNumber} - Ghế số ${p.seatNumber}`).join(" | ")
-                  : "Chưa chọn ghế (Vui lòng click vào sơ đồ)"}
+                  ? activePassengers.map(p => `Khoang ${p.coachNumber} - Ghế ${p.seatNumber}`).join(" | ")
+                  : "Chưa chọn chỗ (Vui lòng click vào sơ đồ)"}
               </div>
 
               {activePassengers.length > 0 && (
                 <div style={{ maxHeight: "600px", overflowY: "auto", paddingRight: "10px", marginBottom: "20px" }}>
                   {activePassengers.map((p, index) => {
-                    const base = Number(activeTrain.price) + p.extraPrice;
+                    const base = Number(activeFlight.price) + p.extraPrice;
                     let rate = 0;
                     if (p.passengerType === "child") rate = 0.25;
                     else if (p.passengerType === "student") rate = 0.10;
@@ -467,9 +466,9 @@ function Booking() {
                     return (
                       <div key={`${p.coachNumber}-${p.seatNumber}`} className="passenger-info-section" style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px solid #ddd", marginBottom: "20px" }}>
                         <h4 style={{ margin: "0 0 15px 0", color: "#333", borderBottom: "1px solid #eee", paddingBottom: "10px" }}>
-                          👤 Hành khách #{index + 1} - Toa {p.coachNumber} Ghế {p.seatNumber}
+                          👤 Hành khách #{index + 1} - Khoang {p.coachNumber} Chỗ {p.seatNumber}
                           <span style={{ fontSize: '13px', color: '#666', marginLeft: '10px', fontWeight: 'normal' }}>
-                            ({p.extraPrice > 0 ? `+${p.extraPrice.toLocaleString()}đ phí toa` : 'Giá gốc'})
+                            ({p.extraPrice > 0 ? `+${p.extraPrice.toLocaleString()}đ phí khoang` : 'Giá gốc'})
                           </span>
                         </h4>
 
@@ -491,7 +490,7 @@ function Booking() {
                           required
                         />
 
-                        <label>Đối tượng đi tàu</label>
+                        <label>Loại hành khách</label>
                         <select
                           value={p.passengerType}
                           onChange={(e) => {
@@ -650,7 +649,7 @@ function Booking() {
               </div>
 
               <div style={{ background: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '8px', fontSize: '13px', marginBottom: '15px', border: '1px solid #ffeeba' }}>
-                ⏳ <strong>Lưu ý:</strong> Ghế bạn chọn sẽ được giữ trong <strong>10 phút</strong>. Vui lòng hoàn tất đặt vé và thanh toán trong thời gian này.
+                ⏳ <strong>Lưu ý:</strong> Chỗ bạn chọn sẽ được giữ trong <strong>10 phút</strong>. Vui lòng hoàn tất đặt vé và thanh toán trong thời gian này.
               </div>
 
               <button
@@ -658,7 +657,7 @@ function Booking() {
                 className="confirm-booking-btn"
                 disabled={loading || activePassengers.length === 0}
               >
-                {loading ? "Đang đặt vé..." : (isRoundTrip && bookingStep === 1 ? "Tiếp tục → Chọn ghế chiều về" : "Xác nhận đặt vé")}
+                {loading ? "Đang đặt vé..." : (isRoundTrip && bookingStep === 1 ? "Tiếp tục → Chọn chỗ chiều về" : "Xác nhận đặt vé")}
               </button>
             </form>
           </div>

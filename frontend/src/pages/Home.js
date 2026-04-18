@@ -14,18 +14,18 @@ function Home() {
   const [passengers, setPassengers] = useState("1 người lớn");
   const [groupSize, setGroupSize] = useState("");
 
-  const [stations, setStations] = useState([]);
+  const [airports, setAirports] = useState([]);
 
   useEffect(() => {
-    const fetchStations = async () => {
+    const fetchAirports = async () => {
       try {
-        const res = await API.get("/trains/stations");
-        setStations(Array.isArray(res.data) ? res.data : []);
+        const res = await API.get("/flights/airports");
+        setAirports(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Lỗi lấy danh sách ga:", err);
+        console.error("Lỗi lấy danh sách sân bay:", err);
       }
     };
-    fetchStations();
+    fetchAirports();
   }, []);
 
   const swapStations = () => {
@@ -52,17 +52,17 @@ function Home() {
   //   }
 
   //   const query = new URLSearchParams(params).toString();
-  //   navigate(`/trains?${query}`);
+  //   navigate(`/flights?${query}`);
   // };
 
   const handleSearch = () => {
     if (!from.trim() || !to.trim()) {
-      toast.error("Vui lòng nhập ga đi và ga đến");
+      toast.error("Vui lòng nhập sân bay đi và sân bay đến");
       return;
     }
 
     if (from.trim().toLowerCase() === to.trim().toLowerCase()) {
-      toast.error("Ga đi và ga đến không được trùng nhau");
+      toast.error("Sân bay đi và sân bay đến không được trùng nhau");
       return;
     }
 
@@ -108,8 +108,8 @@ function Home() {
 
     const query = new URLSearchParams(params).toString();
 
-    // đổi đúng route trang danh sách tàu của bạn
-    navigate(`/trains?${query}`);
+    // đổi đúng route trang danh sách chuyến bay của bạn
+    navigate(`/flights?${query}`);
   };
 
   const handlePopularRouteClick = (title) => {
@@ -129,43 +129,43 @@ function Home() {
       };
 
       const query = new URLSearchParams(params).toString();
-      navigate(`/trains?${query}`);
+      navigate(`/flights?${query}`);
     }
   };
 
   const popularRoutes = [
     {
       title: "Hà Nội → TP. Hồ Chí Minh",
-      time: "30 giờ • Tàu SE1/SE2",
-      price: "Từ 750.000đ →",
+      time: "2 giờ 10 phút • Vietnam Airlines / Vietjet",
+      price: "Từ 1.250.000đ →",
       large: true,
       badge: "Phổ biến nhất",
       className: "route-card blue-red",
     },
     {
       title: "Hà Nội → Đà Nẵng",
-      time: "16 giờ",
+      time: "1 giờ 20 phút",
       className: "route-card green-blue",
     },
     {
-      title: "Đà Nẵng → Huế",
-      time: "2.5 giờ",
+      title: "Đà Nẵng → Sài Gòn",
+      time: "1 giờ 30 phút",
       badge: "Mới",
       className: "route-card purple-gold",
     },
     {
-      title: "HCM → Nha Trang",
-      time: "7 giờ",
+      title: "Hà Nội → Phú Quốc",
+      time: "2 giờ 15 phút",
       className: "route-card blue-green",
     },
     {
-      title: "Sài Gòn → Phan Thiết",
-      time: "4 giờ",
+      title: "Sài Gòn → Nha Trang",
+      time: "1 giờ",
       className: "route-card green-lime",
     },
     {
-      title: "HCM → Đà Nẵng",
-      time: "18 giờ",
+      title: "Cần Thơ → Hà Nội",
+      time: "2 giờ 10 phút",
       className: "route-card red-orange",
     },
   ];
@@ -174,7 +174,7 @@ function Home() {
     {
       icon: "⚡",
       title: "Đặt vé siêu tốc",
-      desc: "Hoàn tất đặt vé trong vòng 60 giây. Không cần xếp hàng, không cần chờ đợi.",
+      desc: "Hoàn tất đặt vé trong vòng 60 giây. Thủ tục nhanh gọn, tiết kiệm thời gian.",
     },
     {
       icon: "🔐",
@@ -184,37 +184,37 @@ function Home() {
     {
       icon: "🧾",
       title: "Vé điện tử tiện lợi",
-      desc: "Nhận vé qua email & SMS. Xuất trình mã QR khi lên tàu, đơn giản và nhanh gọn.",
+      desc: "Nhận vé qua email & SMS. Check-in trực tuyến dễ dàng, đơn giản và nhanh gọn.",
     },
     {
       icon: "🔄",
-      title: "Đổi/Hoàn vé dễ dàng",
-      desc: "Hỗ trợ hoàn vé trước 24 giờ. Quy trình hoàn tiền trong 3–5 ngày làm việc.",
+      title: "Đổi/Hoàn vé linh hoạt",
+      desc: "Hỗ trợ thay đổi lịch trình linh hoạt. Quy trình hoàn tiền nhanh chóng và minh bạch.",
     },
   ];
 
   const seatTypes = [
     {
-      icon: "🪑",
-      title: "Ghế ngồi cứng",
-      desc: "Lựa chọn tiết kiệm nhất. Phù hợp cho hành trình ngắn dưới 5 giờ, 6 chỗ/khoang.",
-    },
-    {
       icon: "💺",
-      title: "Ghế ngồi mềm",
-      desc: "Thoải mái hơn với ghế đệm êm ái. Lý tưởng cho chuyến đi 5–10 giờ, 4 chỗ/khoang.",
+      title: "Hạng Phổ Thông (Economy)",
+      desc: "Lựa chọn tiết kiệm tối ưu. Ghế ngồi thoải mái với đầy đủ tiện nghi cơ bản cho mọi hành trình.",
     },
     {
-      icon: "🛏️",
-      title: "Giường nằm VIP",
-      desc: "Hạng sang nhất trên tàu. Khoang 2 giường, nệm dày, điều hòa riêng. Lý tưởng cho hành trình xuyên đêm.",
+      icon: "🌟",
+      title: "Hạng Thương Gia (Business)",
+      desc: "Trải nghiệm đẳng cấp với ghế ngồi rộng rãi, suất ăn cao cấp và ưu tiên check-in tại quầy riêng.",
+    },
+    {
+      icon: "💎",
+      title: "Hạng Nhất (First Class)",
+      desc: "Đỉnh cao của sự sang trọng. Không gian riêng tư tuyệt đối, dịch vụ cá nhân hóa và các tiện ích xa hoa nhất.",
     },
   ];
 
   return (
     <div className="railviet-page">
-      <datalist id="home-station-list">
-        {stations.map((s) => <option key={s} value={s} />)}
+      <datalist id="home-airport-list">
+        {airports.map((s) => <option key={s} value={s} />)}
       </datalist>
 
       <section className="hero-section">
@@ -223,14 +223,13 @@ function Home() {
             <div className="hero-badge">Hơn 2 triệu vé đã được đặt</div>
 
             <h1 className="hero-title">
-              Hành trình <br />
-              <span>dáng nhớ</span> <br />
-              <strong>xuyên Việt</strong>
+              Cùng bạn <br />
+              <span>khám phá</span> <br />
+              <strong>bầu trời</strong>
             </h1>
 
             <p className="hero-desc">
-              Đặt vé tàu nhanh chóng, tiện lợi. Khám phá vẻ đẹp dọc theo tuyến
-              đường sắt Bắc - Nam huyền thoại.
+              Tìm kiếm và đặt vé máy bay giá rẻ nhanh chóng. Trải nghiệm dịch vụ hàng không đẳng cấp từ các đối tác hàng đầu thế giới.
             </p>
 
             <div className="search-box">
@@ -262,13 +261,13 @@ function Home() {
 
               <div className="search-form">
                 <div className="field">
-                  <label>Ga đi</label>
+                  <label>Sân bay đi</label>
                   <input
                     type="text"
-                    list="home-station-list"
+                    list="home-airport-list"
                     value={from}
                     onChange={(e) => setFrom(e.target.value)}
-                    placeholder="Nhập ga đi..."
+                    placeholder="Nhập sân bay đi..."
                   />
                 </div>
 
@@ -276,19 +275,19 @@ function Home() {
                   type="button"
                   className="swap-btn"
                   onClick={swapStations}
-                  aria-label="Đổi ga đi và ga đến"
+                  aria-label="Đổi nơi đi và nơi đến"
                 >
                   ⇄
                 </button>
 
                 <div className="field">
-                  <label>Ga đến</label>
+                  <label>Sân bay đến</label>
                   <input
                     type="text"
-                    list="home-station-list"
+                    list="home-airport-list"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    placeholder="Nhập ga đến..."
+                    placeholder="Nhập sân bay đến..."
                   />
                 </div>
 
@@ -344,8 +343,8 @@ function Home() {
 
               <div className="hero-stats">
                 <div>
-                  <h3>58</h3>
-                  <p>Ga trên toàn quốc</p>
+                  <h3>42</h3>
+                  <p>Điểm đến trong & ngoài nước</p>
                 </div>
                 <div>
                   <h3>2.4M+</h3>
@@ -416,7 +415,7 @@ function Home() {
               <p className="promo-label">Ưu đãi đặc biệt</p>
               <h3>
                 Giảm <span>30%</span> <br />
-                vé tàu hè 2026
+                vé máy bay hè 2026
               </h3>
               <p className="promo-desc">
                 Áp dụng cho các chuyến đi từ 01/06 đến 31/08/2026.
@@ -432,7 +431,7 @@ function Home() {
 
       <section className="seats-section">
         <div className="rv-container">
-          <p className="section-label">Hạng vé & toa tàu</p>
+          <p className="section-label">Hạng ghế & Dịch vụ</p>
           <h2 className="section-title">
             Chọn hạng ghế <br />
             <span>phù hợp với bạn</span>

@@ -52,7 +52,7 @@ dotenv.config();
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
-const trainRoutes = require("./routes/trainRoutes");
+const flightRoutes = require("./routes/flightRoutes");
 const ticketRoutes = require("./routes/ticketRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -71,7 +71,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
-app.use("/api/trains", trainRoutes);
+app.use("/api/flights", flightRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);

@@ -28,12 +28,12 @@ const formatVND = (val) => {
 function AdminDashboard() {
   const [stats, setStats] = useState({
     totalUsers: 0,
-    totalTrains: 0,
+    totalFlights: 0,
     totalTickets: 0,
     totalRevenue: 0,
     passengerTypes: [],
     dailyRevenue: [],
-    topTrains: [],
+    topFlights: [],
   });
 
   useEffect(() => {
@@ -57,9 +57,9 @@ function AdminDashboard() {
       className: "users",
     },
     {
-      title: "Tổng chuyến tàu",
-      value: stats.totalTrains,
-      icon: "🚆",
+      title: "Tổng chuyến bay",
+      value: stats.totalFlights,
+      icon: "✈️",
       note: "Chuyến đang quản lý",
       className: "trains",
     },
@@ -94,8 +94,8 @@ function AdminDashboard() {
             <p className="admin-dashboard-label">TRUNG TÂM QUẢN TRỊ</p>
             <h1 className="admin-dashboard-title">Dashboard Admin</h1>
             <p className="admin-dashboard-sub">
-              Theo dõi nhanh tình trạng hệ thống, số lượng người dùng, vé tàu,
-              chuyến tàu và doanh thu trên một giao diện trực quan hơn.
+              Theo dõi nhanh tình trạng hệ thống, số lượng người dùng, vé máy bay,
+              chuyến bay và doanh thu trên một giao diện trực quan hơn.
             </p>
           </div>
         </div>
@@ -182,16 +182,16 @@ function AdminDashboard() {
         <div className="admin-charts-section full-width">
           <div className="admin-chart-card">
             <div className="admin-chart-header">
-              <h3>🏆 Top 5 Tuyến tàu phổ biến nhất</h3>
+              <h3>🏆 Top 5 Tuyến bay phổ biến nhất</h3>
               <span className="chart-subtitle">Dựa trên số lượng vé đã thanh toán</span>
             </div>
-            {(!stats.topTrains || stats.topTrains.length === 0) ? (
-              <div className="chart-empty">Chưa có dữ liệu tuyến tàu.</div>
+            {(!stats.topFlights || stats.topFlights.length === 0) ? (
+              <div className="chart-empty">Chưa có dữ liệu tuyến bay.</div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   layout="vertical"
-                  data={stats.topTrains}
+                  data={stats.topFlights}
                   margin={{ top: 10, right: 30, left: 40, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />

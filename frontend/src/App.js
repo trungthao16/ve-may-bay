@@ -10,12 +10,12 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
-import TrainList from "./pages/TrainList";
+import FlightList from "./pages/FlightList";
 import MyTickets from "./pages/MyTickets";
 import Booking from "./pages/Booking";
 
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminTrains from "./pages/AdminTrains";
+import AdminFlights from "./pages/AdminFlights";
 import AdminTickets from "./pages/AdminTickets";
 import AdminUsers from "./pages/AdminUsers";
 
@@ -56,7 +56,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/trains" element={<TrainList />} />
+        <Route path="/flights" element={<FlightList />} />
         <Route path="/booking/:id" element={<Booking />} />
 
         <Route path="/mytickets" element={<MyTickets />} />
@@ -79,10 +79,10 @@ function AppContent() {
         />
 
         <Route
-          path="/admin/trains"
+          path="/admin/flights"
           element={
             <AdminRoute>
-              <AdminTrains />
+              <AdminFlights />
             </AdminRoute>
           }
         />

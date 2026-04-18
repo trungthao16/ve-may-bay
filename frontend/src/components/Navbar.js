@@ -33,8 +33,8 @@ function Navbar() {
     <header className="rv-navbar">
       <div className="rv-container rv-navbar-inner">
         <div className="rv-brand" onClick={() => navigate("/")}>
-          <div className="rv-brand-icon">🚆</div>
-          <span>VeTauOnline</span>
+          <div className="rv-brand-icon">✈️</div>
+          <span>VeMayBayOnline</span>
         </div>
 
         <nav className="rv-menu">
@@ -42,8 +42,8 @@ function Navbar() {
             Trang chủ
           </NavLink>
 
-          <NavLink to="/trains" className={activeClass}>
-            Danh sách tàu
+          <NavLink to="/flights" className={activeClass}>
+            Chuyến bay
           </NavLink>
 
           <NavLink to="/promotions" className={activeClass}>

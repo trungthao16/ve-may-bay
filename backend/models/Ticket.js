@@ -7,16 +7,16 @@ const ticketSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    train: {
+    flight: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Train",
+      ref: "Flight",
       required: true,
     },
     seatNumber: {
       type: String,
       required: true,
     },
-    coachNumber: {
+    cabinNumber: {
       type: Number,
       required: true,
     },

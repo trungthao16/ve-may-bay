@@ -54,8 +54,8 @@ function AdminTickets() {
       const customerName = ticket.user?.name || "";
       const customerEmail = ticket.user?.email || "";
       const route =
-        ticket.train
-          ? `${ticket.train.from || ""} ${ticket.train.to || ""}`
+        ticket.flight
+          ? `${ticket.flight.from || ""} ${ticket.flight.to || ""}`
           : `${ticket.from || ""} ${ticket.to || ""}`;
 
       const matchesSearch =
@@ -77,7 +77,7 @@ function AdminTickets() {
   // chỉ tính doanh thu từ vé đã thanh toán
   const totalRevenue = tickets
     .filter((t) => t.paymentStatus === "paid")
-    .reduce((sum, t) => sum + (t.price ?? t.train?.price ?? 0), 0);
+    .reduce((sum, t) => sum + (t.price ?? t.flight?.price ?? 0), 0);
 
   const renderTicketStatus = (status) => {
     if (status === "cancelled") return "Đã hủy";
@@ -161,8 +161,8 @@ function AdminTickets() {
                   <tr>
                     <th>Khách hàng</th>
                     <th>Mã Vé & Ngày Đặt</th>
-                    <th>Chuyến tàu & Hành trình</th>
-                    <th>Ghế</th>
+                    <th>Chuyến bay & Hành trình</th>
+                    <th>Chỗ</th>
                     <th>Giá (VND)</th>
                     <th>Trạng thái</th>
                     <th>Thanh toán</th>
@@ -173,12 +173,12 @@ function AdminTickets() {
                   {filteredTickets.map((ticket) => {
                     const name = ticket.user?.name || "Không rõ";
                     const email = ticket.user?.email || "Chưa có email";
-                    const trainName =
-                      ticket.train?.name || ticket.train?.trainName || "Chưa có";
-                    const from = ticket.train?.from || ticket.from || "N/A";
-                    const to = ticket.train?.to || ticket.to || "N/A";
-                    const price = ticket.price ?? ticket.train?.price ?? 0;
-                    const originalPrice = ticket.originalPrice ?? ticket.train?.price ?? 0;
+                    const flightName =
+                      ticket.flight?.flightNumber || ticket.flight?.name || "Chưa có";
+                    const from = ticket.flight?.from || ticket.from || "N/A";
+                    const to = ticket.flight?.to || ticket.to || "N/A";
+                    const price = ticket.price ?? ticket.flight?.price ?? 0;
+                    const originalPrice = ticket.originalPrice ?? ticket.flight?.price ?? 0;
                     const status = ticket.status || "booked";
                     const paymentStatus = ticket.paymentStatus || "unpaid";
 
@@ -208,7 +208,7 @@ function AdminTickets() {
                         <td>
                           <div className="admin-trip-info">
                             <div className="admin-trip-route">{from} ➔ {to}</div>
-                            <div className="admin-trip-sub">{trainName}</div>
+                            <div className="admin-trip-sub">{flightName}</div>
                           </div>
                         </td>
 

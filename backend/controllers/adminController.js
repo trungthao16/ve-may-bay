@@ -1,11 +1,11 @@
 const User = require("../models/User");
-const Train = require("../models/Train");
+const Flight = require("../models/Flight");
 const Ticket = require("../models/Ticket");
 
 exports.getStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
-    const totalTrains = await Train.countDocuments();
+    const totalFlights = await Flight.countDocuments();
     const totalTickets = await Ticket.countDocuments();
 
     // 1. Chỉ tính vé thành công/đã thanh toán
@@ -57,40 +57,40 @@ exports.getStats = async (req, res) => {
       });
     }
 
-    // 4. Thống kê Top 5 chuyến tàu phổ biến nhất
-    const topTrainsAgg = await Ticket.aggregate([
+    // 4. Thống kê Top 5 chuyến bay phổ biến nhất
+    const topFlightsAgg = await Ticket.aggregate([
       { $match: { status: "booked", paymentStatus: "paid" } },
-      { $group: { _id: "$train", count: { $sum: 1 }, revenue: { $sum: "$price" } } },
+      { $group: { _id: "$flight", count: { $sum: 1 }, revenue: { $sum: "$price" } } },
       { $sort: { count: -1 } },
       { $limit: 5 },
       {
         $lookup: {
-          from: "trains",
+          from: "flights",
           localField: "_id",
           foreignField: "_id",
-          as: "trainDetails"
+          as: "flightDetails"
         }
       },
-      { $unwind: "$trainDetails" },
+      { $unwind: "$flightDetails" },
       {
         $project: {
           count: 1,
           revenue: 1,
-          name: "$trainDetails.name",
-          from: "$trainDetails.from",
-          to: "$trainDetails.to"
+          name: "$flightDetails.flightNumber",
+          from: "$flightDetails.from",
+          to: "$flightDetails.to"
         }
       }
     ]);
 
     res.json({
       totalUsers,
-      totalTrains,
+      totalFlights,
       totalTickets,
       totalRevenue,
       passengerTypes: Object.values(passengerStatsMap),
       dailyRevenue,
-      topTrains: topTrainsAgg
+      topFlights: topFlightsAgg
     });
   } catch (error) {
     console.log("getStats error:", error);

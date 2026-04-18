@@ -194,7 +194,7 @@ function MyTickets() {
                         {ticket.status === "cancelled" ? "Đã hủy" : "Đã đặt"}
                       </div>
 
-                      <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{ticket.train?.name || ticket.train?.trainName || "Chuyến tàu"}</h3>
+                      <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{ticket.train?.name || ticket.train?.flightNumber || "Chuyến bay"}</h3>
 
                       <p>
                         <strong>Mã vé:</strong> <span style={{ fontWeight: "bold", color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</span>
@@ -214,7 +214,7 @@ function MyTickets() {
                       </p>
 
                       <p>
-                        <strong>Trí:</strong> Toa {ticket.coachNumber} - Ghế {ticket.seatNumber}
+                        <strong>Vị trí:</strong> Khoang {ticket.coachNumber} - Chỗ {ticket.seatNumber}
                       </p>
 
                       <p>

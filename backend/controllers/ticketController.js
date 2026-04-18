@@ -1,22 +1,22 @@
 const Ticket = require("../models/Ticket");
-const Train = require("../models/Train");
+const Flight = require("../models/Flight");
 const Promotion = require("../models/Promotion");
 
 exports.createTicket = async (req, res) => {
   try {
     const {
-      trainId,
-      passengers, // Mảng các hành khách: [{ name, cccd, type, coachNumber, seatNumber }]
+      flightId,
+      passengers, // Mảng các hành khách: [{ name, cccd, type, cabinNumber, seatNumber }]
       promotionCode,
     } = req.body;
 
-    if (!trainId || !passengers || !Array.isArray(passengers) || passengers.length === 0) {
-      return res.status(400).json({ message: "Thiếu thông tin hành khách hoặc chuyến tàu" });
+    if (!flightId || !passengers || !Array.isArray(passengers) || passengers.length === 0) {
+      return res.status(400).json({ message: "Thiếu thông tin hành khách hoặc chuyến bay" });
     }
 
-    const train = await Train.findById(trainId);
-    if (!train) {
-      return res.status(404).json({ message: "Không tìm thấy chuyến tàu" });
+    const flight = await Flight.findById(flightId);
+    if (!flight) {
+      return res.status(404).json({ message: "Không tìm thấy chuyến bay" });
     }
 
     const createdTickets = [];
@@ -28,30 +28,30 @@ exports.createTicket = async (req, res) => {
     const now = new Date();
 
     for (const p of passengers) {
-      const { name, cccd, type, coachNumber, seatNumber } = p;
+      const { name, cccd, type, cabinNumber, seatNumber } = p;
 
-      if (!name || !cccd || !coachNumber || !seatNumber) {
+      if (!name || !cccd || !cabinNumber || !seatNumber) {
         throw new Error(`Hành khách ${name || ""} thiếu thông tin bắt buộc`);
       }
 
       // Kiểm tra ghế đã được đặt chưa
       const existingTicket = await Ticket.findOne({
-        train: trainId,
-        coachNumber: Number(coachNumber),
+        flight: flightId,
+        cabinNumber: Number(cabinNumber),
         seatNumber: seatNumber.toString(),
         status: "booked",
       });
 
       if (existingTicket) {
-        throw new Error(`Ghế ${seatNumber} toa ${coachNumber} đã được đặt bởi người khác`);
+        throw new Error(`Ghế ${seatNumber} khoang ${cabinNumber} đã được đặt bởi người khác`);
       }
 
-      // Tính giá dựa theo loại toa
-      let basePrice = Number(train.price);
-      if (train.coaches && train.coaches.length > 0) {
-        const coach = train.coaches.find(c => c.coachNumber === Number(coachNumber));
-        if (coach && coach.priceMultiplier && coach.priceMultiplier !== 1) {
-          basePrice = Math.round(basePrice * coach.priceMultiplier);
+      // Tính giá dựa theo loại khoang
+      let basePrice = Number(flight.price);
+      if (flight.cabins && flight.cabins.length > 0) {
+        const cabin = flight.cabins.find(c => c.cabinNumber === Number(cabinNumber));
+        if (cabin && cabin.priceMultiplier && cabin.priceMultiplier !== 1) {
+          basePrice = Math.round(basePrice * cabin.priceMultiplier);
         }
       }
 
@@ -92,9 +92,9 @@ exports.createTicket = async (req, res) => {
 
       const ticket = await Ticket.create({
         user: req.user.id,
-        train: trainId,
+        flight: flightId,
         seatNumber: seatNumber.toString(),
-        coachNumber: Number(coachNumber),
+        cabinNumber: Number(cabinNumber),
         originalPrice: basePrice,
         passengerName: name,
         cccd: cccd,
@@ -111,9 +111,9 @@ exports.createTicket = async (req, res) => {
       createdTickets.push(ticket);
     }
 
-    // Xóa tất cả SeatLock của user này cho train này sau khi đặt thành công
+    // Xóa tất cả SeatLock của user này cho chuyến bay này sau khi đặt thành công
     const SeatLock = require("../models/SeatLock");
-    await SeatLock.deleteMany({ trainId, lockedBy: req.user.id });
+    await SeatLock.deleteMany({ flightId, lockedBy: req.user.id });
 
     res.status(201).json({
       message: `Đã đặt thành công ${createdTickets.length} vé`,
@@ -128,7 +128,7 @@ exports.createTicket = async (req, res) => {
 exports.getMyTickets = async (req, res) => {
   try {
     const tickets = await Ticket.find({ user: req.user.id })
-      .populate("train")
+      .populate("flight")
       .sort({ createdAt: -1 });
 
     res.json(tickets);
@@ -139,7 +139,7 @@ exports.getMyTickets = async (req, res) => {
 
 exports.cancelTicket = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id).populate("train");
+    const ticket = await Ticket.findById(req.params.id).populate("flight");
 
     if (!ticket) {
       return res.status(404).json({ message: "Không tìm thấy vé" });
@@ -157,12 +157,12 @@ exports.cancelTicket = async (req, res) => {
     let cancellationFee = 0;
 
     // Chỉ tính tiền hoàn lại nếu vé đã được thanh toán
-    if (ticket.paymentStatus === "paid" && ticket.train) {
+    if (ticket.paymentStatus === "paid" && ticket.flight) {
       const now = new Date();
       
       // Kết hợp departureDate và departureTime để có thời điểm khởi hành chính xác
-      const depDate = new Date(ticket.train.departureDate); // YYYY-MM-DD
-      const [hours, minutes] = (ticket.train.departureTime || "00:00").split(":");
+      const depDate = new Date(ticket.flight.departureDate); // YYYY-MM-DD
+      const [hours, minutes] = (ticket.flight.departureTime || "00:00").split(":");
       depDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0);
 
       const timeDiffMs = depDate - now;
@@ -216,7 +216,7 @@ exports.getAllTickets = async (req, res) => {
   try {
     const tickets = await Ticket.find()
       .populate("user", "name email")
-      .populate("train")
+      .populate("flight")
       .sort({ createdAt: -1 });
 
     res.json(tickets);

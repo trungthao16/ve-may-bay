@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import API from "../api/axios";
 import toast from "react-hot-toast";
 
-function AdminTrains() {
-  const [trains, setTrains] = useState([]);
+function AdminFlights() {
+  const [flights, setFlights] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
   const [form, setForm] = useState({
-    trainName: "",
+    flightNumber: "",
     from: "",
     to: "",
     departureDate: "",
@@ -17,10 +17,10 @@ function AdminTrains() {
     totalSeats: "",
   });
 
-  const fetchTrains = async () => {
+  const fetchFlights = async () => {
     try {
-      const res = await API.get("/trains");
-      setTrains(res.data);
+      const res = await API.get("/flights");
+      setFlights(res.data);
     } catch (error) {
       console.log("FETCH ERROR:", error);
       console.log("FETCH DATA:", error.response?.data);
@@ -28,7 +28,7 @@ function AdminTrains() {
   };
 
   useEffect(() => {
-    fetchTrains();
+    fetchFlights();
   }, []);
 
   const handleChange = (e) => {
@@ -40,7 +40,7 @@ function AdminTrains() {
 
   const resetForm = () => {
     setForm({
-      trainName: "",
+      flightNumber: "",
       from: "",
       to: "",
       departureDate: "",
@@ -57,15 +57,15 @@ function AdminTrains() {
 
     try {
       if (editingId) {
-        await API.put(`/trains/${editingId}`, form);
-        toast.success("Cập nhật tàu thành công");
+        await API.put(`/flights/${editingId}`, form);
+        toast.success("Cập nhật chuyến bay thành công");
       } else {
-        await API.post("/trains", form);
-        toast.success("Thêm tàu thành công");
+        await API.post("/flights", form);
+        toast.success("Thêm chuyến bay thành công");
       }
 
       resetForm();
-      fetchTrains();
+      fetchFlights();
     } catch (error) {
       console.log("SUBMIT ERROR:", error);
       console.log("SUBMIT RESPONSE:", error.response);
@@ -75,30 +75,30 @@ function AdminTrains() {
     }
   };
 
-  const handleEdit = (train) => {
-    setEditingId(train._id);
+  const handleEdit = (flight) => {
+    setEditingId(flight._id);
     setForm({
-      trainName: train.trainName || "",
-      from: train.from || "",
-      to: train.to || "",
-      departureDate: train.departureDate
-        ? train.departureDate.slice(0, 10)
+      flightNumber: flight.flightNumber || "",
+      from: flight.from || "",
+      to: flight.to || "",
+      departureDate: flight.departureDate
+        ? flight.departureDate.slice(0, 10)
         : "",
-      departureTime: train.departureTime || "",
-      arrivalTime: train.arrivalTime || "",
-      price: train.price || "",
-      totalSeats: train.totalSeats || "",
+      departureTime: flight.departureTime || "",
+      arrivalTime: flight.arrivalTime || "",
+      price: flight.price || "",
+      totalSeats: flight.totalSeats || "",
     });
   };
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Bạn có chắc muốn xóa tàu này?");
+    const confirmDelete = window.confirm("Bạn có chắc muốn xóa chuyến bay này?");
     if (!confirmDelete) return;
 
     try {
-      await API.delete(`/trains/${id}`);
-      toast.success("Xóa tàu thành công");
-      fetchTrains();
+      await API.delete(`/flights/${id}`);
+      toast.success("Xóa chuyến bay thành công");
+      fetchFlights();
     } catch (error) {
       console.log("DELETE ERROR:", error);
       console.log("DELETE DATA:", error.response?.data);
@@ -107,24 +107,26 @@ function AdminTrains() {
   };
 
   return (
-    <div className="rv-container admin-trains-page">
-      <div className="trainlist-header">
+    <div className="admin-page">
+      <div className="rv-container">
+        <div className="admin-page-header">
         <p className="section-label">Quản trị hệ thống</p>
-        <h1 className="trainlist-title">Quản lý tàu</h1>
-      </div>
+          <h1 className="admin-page-title">Quản lý chuyến bay</h1>
+          <p className="admin-page-sub">Quản trị các chặng bay và lịch trình bay trong hệ thống</p>
+        </div>
 
       <div className="train-card admin-form-card">
         <h3 className="admin-form-title">
-          {editingId ? "Sửa chuyến tàu" : "Thêm chuyến tàu"}
+          {editingId ? "Sửa chuyến bay" : "Thêm chuyến bay"}
         </h3>
 
         <form onSubmit={handleSubmit}>
           <div className="admin-form-grid">
             <input
               type="text"
-              name="trainName"
-              placeholder="Tên tàu"
-              value={form.trainName}
+              name="flightNumber"
+              placeholder="Mã chuyến bay (VD: VN123)"
+              value={form.flightNumber}
               onChange={handleChange}
               required
             />
@@ -132,7 +134,7 @@ function AdminTrains() {
             <input
               type="text"
               name="from"
-              placeholder="Ga đi"
+              placeholder="Sân bay đi"
               value={form.from}
               onChange={handleChange}
               required
@@ -141,7 +143,7 @@ function AdminTrains() {
             <input
               type="text"
               name="to"
-              placeholder="Ga đến"
+              placeholder="Sân bay đến"
               value={form.to}
               onChange={handleChange}
               required
@@ -189,7 +191,7 @@ function AdminTrains() {
             <input
               type="number"
               name="totalSeats"
-              placeholder="Tổng số ghế"
+              placeholder="Tổng số chỗ"
               value={form.totalSeats}
               onChange={handleChange}
               required
@@ -198,7 +200,7 @@ function AdminTrains() {
 
           <div className="admin-form-actions">
             <button type="submit" className="book-btn admin-main-btn">
-              {editingId ? "Cập nhật" : "Thêm tàu"}
+              {editingId ? "Cập nhật" : "Thêm chuyến bay"}
             </button>
 
             {editingId && (
@@ -214,53 +216,53 @@ function AdminTrains() {
         </form>
       </div>
 
-      <div className="train-card admin-table-card">
+      <div className="admin-card">
         <div className="admin-table-wrapper">
-          <table className="admin-trains-table">
+          <table className="admin-table">
             <thead>
               <tr>
-                <th>Tên tàu</th>
-                <th>Ga đi</th>
-                <th>Ga đến</th>
+                <th>Mã chuyến bay</th>
+                <th>Sân bay đi</th>
+                <th>Sân bay đến</th>
                 <th>Ngày khởi hành</th>
                 <th>Giá</th>
                 <th>Giờ đi</th>
                 <th>Giờ đến</th>
-                <th>Ghế</th>
+                <th>Chỗ</th>
                 <th>Hành động</th>
               </tr>
             </thead>
 
             <tbody>
-              {trains.length > 0 ? (
-                trains.map((train) => (
-                  <tr key={train._id}>
-                    <td>{train.trainName}</td>
-                    <td>{train.from}</td>
-                    <td>{train.to}</td>
+              {flights.length > 0 ? (
+                flights.map((flight) => (
+                  <tr key={flight._id}>
+                    <td>{flight.flightNumber}</td>
+                    <td>{flight.from}</td>
+                    <td>{flight.to}</td>
                     <td>
-                      {train.departureDate
-                        ? new Date(train.departureDate).toLocaleDateString("vi-VN")
+                      {flight.departureDate
+                        ? new Date(flight.departureDate).toLocaleDateString("vi-VN")
                         : "Chưa có"}
                     </td>
-                    <td>{Number(train.price).toLocaleString("vi-VN")}đ</td>
-                    <td>{train.departureTime}</td>
-                    <td>{train.arrivalTime}</td>
-                    <td>{train.totalSeats}</td>
-                    <td>
-                      <div className="admin-action-buttons">
+                    <td>{Number(flight.price).toLocaleString("vi-VN")}đ</td>
+                    <td>{flight.departureTime}</td>
+                    <td>{flight.arrivalTime}</td>
+                    <td>{flight.totalSeats}</td>
+                    <td className="admin-actions-cell">
+                      <div className="admin-actions">
                         <button
                           type="button"
-                          onClick={() => handleEdit(train)}
-                          className="admin-edit-btn"
+                          onClick={() => handleEdit(flight)}
+                          className="admin-btn role"
                         >
                           Sửa
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => handleDelete(train._id)}
-                          className="admin-delete-btn"
+                          onClick={() => handleDelete(flight._id)}
+                          className="admin-btn delete"
                         >
                           Xóa
                         </button>
@@ -271,7 +273,7 @@ function AdminTrains() {
               ) : (
                 <tr>
                   <td colSpan="9" className="admin-empty">
-                    Chưa có chuyến tàu nào
+                    Chưa có chuyến bay nào
                   </td>
                 </tr>
               )}
@@ -280,7 +282,8 @@ function AdminTrains() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
-export default AdminTrains;
+export default AdminFlights;

@@ -34,9 +34,9 @@ function AdminNavbar() {
       <div className="admin-navbar-inner">
         <div className="admin-navbar-left">
           <div className="admin-brand" onClick={() => navigate("/admin")}>
-            <div className="rv-brand-icon">🚆</div>
+            <div className="rv-brand-icon">✈️</div>
             <div className="admin-brand-text">
-              <h2>VeTauOnline</h2>
+              <h2>VeMayBayOnline</h2>
               <span>Quản trị hệ thống</span>
             </div>
           </div>
@@ -46,8 +46,8 @@ function AdminNavbar() {
               Dashboard
             </NavLink>
 
-            <NavLink to="/admin/trains" className={activeClass}>
-              Quản lý tàu
+            <NavLink to="/admin/flights" className={activeClass}>
+              Quản lý chuyến bay
             </NavLink>
 
             <NavLink to="/admin/tickets" className={activeClass}>

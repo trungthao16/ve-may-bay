@@ -159,7 +159,7 @@ function AdminUsers() {
                         </span>
                       </td>
 
-                      <td>
+                      <td className="admin-actions-cell">
                         <div className="admin-actions">
                           <button
                             className="admin-btn role"

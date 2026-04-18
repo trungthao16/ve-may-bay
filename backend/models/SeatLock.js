@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
 const seatLockSchema = new mongoose.Schema({
-  trainId: { 
+  flightId: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Train", 
+    ref: "Flight", 
     required: true 
   },
-  coachNumber: { 
+  cabinNumber: { 
     type: Number, 
     required: true 
   },
@@ -27,7 +27,7 @@ const seatLockSchema = new mongoose.Schema({
   }
 });
 
-// Chống trùng lặp lock: Mỗi ghế trên 1 train chỉ bị lock 1 lần tại 1 thời điểm
-seatLockSchema.index({ trainId: 1, coachNumber: 1, seatNumber: 1 }, { unique: true });
+// Chống trùng lặp lock: Mỗi ghế trên 1 flight chỉ bị lock 1 lần tại 1 thời điểm
+seatLockSchema.index({ flightId: 1, cabinNumber: 1, seatNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model("SeatLock", seatLockSchema);

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
-function TrainList() {
+function FlightList() {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -21,8 +21,8 @@ function TrainList() {
   const [searchReturnDate, setSearchReturnDate] = useState(initialReturnDate);
   const [searchGroupSize, setSearchGroupSize] = useState(initialGroupSize);
 
-  const [outboundTrains, setOutboundTrains] = useState([]);
-  const [returnTrains, setReturnTrains] = useState([]);
+  const [outboundFlights, setOutboundFlights] = useState([]);
+  const [returnFlights, setReturnFlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("time-asc");
 
@@ -30,7 +30,7 @@ function TrainList() {
   const [selectedOutbound, setSelectedOutbound] = useState(null);
   const [selectedReturn, setSelectedReturn] = useState(null);
 
-  const [stations, setStations] = useState([]);
+  const [airports, setAirports] = useState([]);
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const fromRef = useRef(null);
@@ -46,21 +46,21 @@ function TrainList() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch danh sách ga từ DB
+  // Fetch danh sách sân bay từ DB
   useEffect(() => {
-    const fetchStations = async () => {
+    const fetchAirports = async () => {
       try {
-        const res = await API.get("/trains/stations");
-        setStations(Array.isArray(res.data) ? res.data : []);
+        const res = await API.get("/flights/airports");
+        setAirports(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Lỗi lấy danh sách ga:", err);
+        console.error("Lỗi lấy danh sách sân bay:", err);
       }
     };
-    fetchStations();
+    fetchAirports();
   }, []);
 
   useEffect(() => {
-    const fetchTrains = async () => {
+    const fetchFlights = async () => {
       try {
         setLoading(true);
 
@@ -72,7 +72,7 @@ function TrainList() {
           groupSize: initialGroupSize,
         };
 
-        const resGo = await API.get("/trains/search", { params: paramsGo });
+        const resGo = await API.get("/flights/search", { params: paramsGo });
         let finalGoTrips = Array.isArray(resGo.data) ? resGo.data : [];
 
         let backTrips = [];
@@ -86,12 +86,12 @@ function TrainList() {
           if (initialReturnDate) {
             paramsBack.date = initialReturnDate;
           }
-          const resBack = await API.get("/trains/search", { params: paramsBack });
+          const resBack = await API.get("/flights/search", { params: paramsBack });
           backTrips = Array.isArray(resBack.data) ? resBack.data : [];
         }
 
-        setOutboundTrains(finalGoTrips);
-        setReturnTrains(backTrips);
+        setOutboundFlights(finalGoTrips);
+        setReturnFlights(backTrips);
 
         setSearchFrom(initialFrom);
         setSearchTo(initialTo);
@@ -105,15 +105,15 @@ function TrainList() {
         setSelectedReturn(null);
 
       } catch (error) {
-        console.error("Lỗi lấy danh sách tàu:", error);
-        setOutboundTrains([]);
-        setReturnTrains([]);
+        console.error("Lỗi lấy danh sách chuyến bay:", error);
+        setOutboundFlights([]);
+        setReturnFlights([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTrains();
+    fetchFlights();
   }, [initialFrom, initialTo, initialDate, initialReturnDate, initialTripType, initialGroupSize]);
 
   const handleSearch = (e) => {
@@ -133,7 +133,7 @@ function TrainList() {
     }
 
     const queryString = new URLSearchParams(params).toString();
-    navigate(`/trains?${queryString}`);
+    navigate(`/flights?${queryString}`);
   };
 
   const swapStations = () => {
@@ -142,8 +142,8 @@ function TrainList() {
     setSearchTo(temp);
   };
 
-  const sortTrains = (trainList) => {
-    return [...trainList].sort((a, b) => {
+  const sortFlights = (flightList) => {
+    return [...flightList].sort((a, b) => {
       // Luôn sắp xếp theo ngày khởi hành trước (ngày gần nhất lên đầu)
       const dateA = new Date(a.departureDate || 0);
       const dateB = new Date(b.departureDate || 0);
@@ -158,9 +158,9 @@ function TrainList() {
     });
   };
 
-  const renderTrainCard = (train, isReturn = false) => {
-    const total = train.totalSeats || train.seats || 0;
-    const avail = train.availableSeats !== undefined ? train.availableSeats : total;
+  const renderFlightCard = (flight, isReturn = false) => {
+    const total = flight.totalSeats || flight.seats || 0;
+    const avail = flight.availableSeats !== undefined ? flight.availableSeats : total;
 
     let badgeText = "Còn chỗ";
     let badgeColor = "#28a745"; // xanh lá
@@ -173,52 +173,52 @@ function TrainList() {
       badgeColor = "#fd7e14"; // cam
     }
 
-    const isSelected = isReturn ? selectedReturn === train._id : selectedOutbound === train._id;
+    const isSelected = isReturn ? selectedReturn === flight._id : selectedOutbound === flight._id;
 
     return (
-      <div className="train-card" key={train._id} style={isSelected ? { border: '2px solid #4ca37d', background: '#f5fff9', boxShadow: '0 4px 15px rgba(76, 163, 125, 0.2)' } : {}}>
-        <div className="train-top">
+      <div className="flight-card" key={flight._id} style={isSelected ? { border: '2px solid #4ca37d', background: '#f5fff9', boxShadow: '0 4px 15px rgba(76, 163, 125, 0.2)' } : {}}>
+        <div className="flight-top">
           <div>
-            <span className="train-badge" style={{ backgroundColor: badgeColor }}>
+            <span className="flight-badge" style={{ backgroundColor: badgeColor }}>
               {badgeText}
             </span>
-            <h3>{train.trainName || train.name || "Chuyến tàu"}</h3>
+            <h3>{flight.flightNumber || flight.name || "Chuyến bay"}</h3>
           </div>
-          <div className="train-price">
-            {Number(train.price || 0).toLocaleString("vi-VN")}đ
+          <div className="flight-price">
+            {Number(flight.price || 0).toLocaleString("vi-VN")}đ
           </div>
         </div>
 
-        <div className="train-route">
+        <div className="flight-route">
           <div>
-            <p>Ga đi</p>
-            <h4>{train.from || "Chưa có"}</h4>
+            <p>Sân bay đi</p>
+            <h4>{flight.from || "Chưa có"}</h4>
           </div>
           <div className="route-arrow">→</div>
           <div>
-            <p>Ga đến</p>
-            <h4>{train.to || "Chưa có"}</h4>
+            <p>Sân bay đến</p>
+            <h4>{flight.to || "Chưa có"}</h4>
           </div>
         </div>
 
-        <div className="train-meta">
+        <div className="flight-meta">
           <div>
             <span>Khởi hành</span>
             <strong>
-              {train.departureDate
-                ? new Date(train.departureDate).toLocaleDateString("vi-VN")
+              {flight.departureDate
+                ? new Date(flight.departureDate).toLocaleDateString("vi-VN")
                 : "Chưa có"}
             </strong>
           </div>
 
           <div>
-            <span>Giờ đi</span>
-            <strong>{train.departureTime || "Chưa có"}</strong>
+            <span>Giờ bay</span>
+            <strong>{flight.departureTime || "Chưa có"}</strong>
           </div>
 
           <div>
-            <span>Giờ đến</span>
-            <strong>{train.arrivalTime || "Chưa có"}</strong>
+            <span>Hạ cánh</span>
+            <strong>{flight.arrivalTime || "Chưa có"}</strong>
           </div>
 
           <div>
@@ -239,8 +239,8 @@ function TrainList() {
               border: isSelected ? '1px solid #4ca37d' : ''
             }}
             onClick={() => {
-              if (isReturn) setSelectedReturn(train._id);
-              else setSelectedOutbound(train._id);
+              if (isReturn) setSelectedReturn(flight._id);
+              else setSelectedOutbound(flight._id);
             }}
           >
             {avail <= 0 ? "Đã bán hết" : isSelected ? "Đã Chọn" : (isReturn ? "Chọn Chiều Về" : "Chọn Chiều Đi")}
@@ -250,9 +250,9 @@ function TrainList() {
             className="book-btn"
             disabled={avail <= 0}
             style={{ opacity: avail <= 0 ? 0.6 : 1, cursor: avail <= 0 ? "not-allowed" : "pointer" }}
-            onClick={() => navigate(`/booking/${train._id}`)}
+            onClick={() => navigate(`/booking/${flight._id}`)}
           >
-            {avail <= 0 ? "Đã bán hết" : "Đặt vé ngay"}
+            {avail <= 0 ? "Đã bán hết" : "Đặt chỗ ngay"}
           </button>
         )}
       </div>
@@ -260,11 +260,11 @@ function TrainList() {
   };
 
   return (
-    <div className="trainlist-page">
+    <div className="FlightList-page">
 
-      <div className="rv-container trainlist-wrap">
+      <div className="rv-container FlightList-wrap">
         <div className="search-box" style={{ marginBottom: "40px" }}>
-          <form className="trainlist-search-form" onSubmit={handleSearch}>
+          <form className="flightlist-search-form" onSubmit={handleSearch}>
             <div className="field">
               <label>Loại vé</label>
               <select value={searchTripType} onChange={(e) => {
@@ -279,7 +279,7 @@ function TrainList() {
                  };
                  if (newType === "roundtrip") params.returnDate = searchReturnDate;
                  if (newType === "group") params.groupSize = searchGroupSize;
-                 navigate(`/trains?${new URLSearchParams(params).toString()}`);
+                 navigate(`/flights?${new URLSearchParams(params).toString()}`);
               }}>
                 <option value="oneway">Một chiều</option>
                 <option value="roundtrip">Khứ hồi</option>
@@ -288,18 +288,18 @@ function TrainList() {
             </div>
 
             <div className="field" ref={fromRef} style={{ position: 'relative' }}>
-              <label>Ga đi</label>
+              <label>Sân bay đi</label>
               <input
                 type="text"
                 value={searchFrom}
                 onChange={(e) => { setSearchFrom(e.target.value); setShowFromDropdown(true); }}
                 onFocus={() => setShowFromDropdown(true)}
-                placeholder="Nhập hoặc chọn ga đi..."
+                placeholder="Nhập hoặc chọn sân bay đi..."
                 autoComplete="off"
               />
               {showFromDropdown && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '0 0 8px 8px', maxHeight: '200px', overflowY: 'auto', zIndex: 999, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  {stations.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).map(s => (
+                  {airports.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).map(s => (
                     <div
                       key={s}
                       onClick={() => { setSearchFrom(s); setShowFromDropdown(false); }}
@@ -310,8 +310,8 @@ function TrainList() {
                       {s}
                     </div>
                   ))}
-                  {stations.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy ga phù hợp</div>
+                  {airports.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy sân bay phù hợp</div>
                   )}
                 </div>
               )}
@@ -321,25 +321,24 @@ function TrainList() {
               type="button"
               className="swap-btn"
               onClick={swapStations}
-              aria-label="Đổi ga đi và ga đến"
-              style={{ alignSelf: 'flex-end', marginBottom: '3px' }}
+              aria-label="Đổi sân bay đi và sân bay đến"
             >
               ⇄
             </button>
 
             <div className="field" ref={toRef} style={{ position: 'relative' }}>
-              <label>Ga đến</label>
+              <label>Sân bay đến</label>
               <input
                 type="text"
                 value={searchTo}
                 onChange={(e) => { setSearchTo(e.target.value); setShowToDropdown(true); }}
                 onFocus={() => setShowToDropdown(true)}
-                placeholder="Nhập hoặc chọn ga đến..."
+                placeholder="Nhập hoặc chọn sân bay đến..."
                 autoComplete="off"
               />
               {showToDropdown && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '0 0 8px 8px', maxHeight: '200px', overflowY: 'auto', zIndex: 999, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  {stations.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).map(s => (
+                  {airports.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).map(s => (
                     <div
                       key={s}
                       onClick={() => { setSearchTo(s); setShowToDropdown(false); }}
@@ -350,8 +349,8 @@ function TrainList() {
                       {s}
                     </div>
                   ))}
-                  {stations.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy ga phù hợp</div>
+                  {airports.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy sân bay phù hợp</div>
                   )}
                 </div>
               )}
@@ -382,10 +381,10 @@ function TrainList() {
           </form>
         </div>
 
-        <div className="trainlist-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div className="FlightList-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             <p className="section-label">Kết quả tìm kiếm</p>
-            <h1 className="trainlist-title">Danh sách chuyến tàu</h1>
+            <h1 className="FlightList-title">Danh sách chuyến bay</h1>
           </div>
           <div className="field" style={{ minWidth: "220px", marginBottom: "0" }}>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
@@ -400,7 +399,7 @@ function TrainList() {
         {loading ? (
           <div className="empty-box">
             <div className="loading-spinner"></div>
-            <p>Đang tải dữ liệu chuyến tàu...</p>
+            <p>Đang tải dữ liệu chuyến bay...</p>
           </div>
         ) : (
           <>
@@ -411,11 +410,11 @@ function TrainList() {
                   {initialTripType === "roundtrip" ? "Bước 1: " : ""}Chuyến đi ({initialFrom || "Tất cả"} → {initialTo || "Tất cả"})
                 </h2>
 
-                {outboundTrains.length === 0 ? (
+                {outboundFlights.length === 0 ? (
                   <div className="empty-box">Không có chuyến đi phù hợp.</div>
                 ) : (
-                  <div className="train-grid">
-                    {sortTrains(outboundTrains).map((train) => renderTrainCard(train, false))}
+                  <div className="flight-grid">
+                    {sortFlights(outboundFlights).map((flight) => renderFlightCard(flight, false))}
                   </div>
                 )}
               </>
@@ -423,7 +422,7 @@ function TrainList() {
 
             {/* BƯỚC 2: Hiển thị chuyến về (khi đã chọn chuyến đi trong roundtrip) */}
             {initialTripType === "roundtrip" && selectedOutbound && (() => {
-              const chosenOutbound = outboundTrains.find(t => t._id === selectedOutbound);
+              const chosenOutbound = outboundFlights.find(t => t._id === selectedOutbound);
               
               // Tính thời điểm sớm nhất có thể về = ngày đi + giờ đến + 3 tiếng
               let earliestReturnTime = null;
@@ -434,7 +433,7 @@ function TrainList() {
                 earliestReturnTime.setHours(arrH + 3, arrM, 0, 0); // +3 tiếng sau giờ đến
               }
 
-              const filteredReturn = returnTrains.filter(t => {
+              const filteredReturn = returnFlights.filter(t => {
                 const matchRoute = t.from === (chosenOutbound?.to || initialTo) && 
                                    t.to === (chosenOutbound?.from || initialFrom);
                 if (!matchRoute) return false;
@@ -458,7 +457,7 @@ function TrainList() {
                       ← Quay lại chọn chiều đi
                     </button>
                     <div style={{ background: '#dff4e3', color: '#247046', padding: '8px 14px', borderRadius: '10px', fontSize: '14px', fontWeight: '600' }}>
-                      ✓ Chiều đi: {chosenOutbound?.trainName} ({chosenOutbound?.from} → {chosenOutbound?.to}) - {chosenOutbound?.departureTime}
+                      ✓ Chiều đi: {chosenOutbound?.flightNumber} ({chosenOutbound?.from} → {chosenOutbound?.to}) - {chosenOutbound?.departureTime}
                     </div>
                   </div>
 
@@ -470,7 +469,7 @@ function TrainList() {
                     <div className="empty-box">Không có chuyến về phù hợp từ {chosenOutbound?.to} về {chosenOutbound?.from}.</div>
                   ) : (
                     <div className="train-grid">
-                      {sortTrains(filteredReturn).map((train) => renderTrainCard(train, true))}
+                      {sortFlights(filteredReturn).map((flight) => renderFlightCard(flight, true))}
                     </div>
                   )}
                 </>
@@ -518,4 +517,4 @@ function TrainList() {
   );
 }
 
-export default TrainList;
+export default FlightList;

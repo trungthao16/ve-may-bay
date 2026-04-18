@@ -30,7 +30,7 @@ function TicketQRCode({ ticket, onClose }) {
       const paramHeight = (imgProps.height * paramWidth) / imgProps.width;
 
       pdf.addImage(imgData, "PNG", 10, 10, paramWidth, paramHeight);
-      pdf.save(`VeTau_${ticket._id.slice(-6)}.pdf`);
+      pdf.save(`VeMayBay_${ticket._id.slice(-6)}.pdf`);
     } catch (err) {
       console.error("Lỗi xuất PDF:", err);
     } finally {
@@ -41,9 +41,9 @@ function TicketQRCode({ ticket, onClose }) {
   // Render QR content logic
   const qrValue = JSON.stringify({
     id: ticket._id,
-    train: ticket.train?.trainName || ticket.train?.name || "N/A",
+    flight: ticket.train?.flightNumber || ticket.train?.name || "N/A",
     seat: ticket.seatNumber,
-    coach: ticket.coachNumber,
+    cabin: ticket.coachNumber,
     name: ticket.passengerName || "N/A",
     cccd: ticket.cccd || "N/A"
   });
@@ -54,8 +54,8 @@ function TicketQRCode({ ticket, onClose }) {
         <div className="printable-ticket" id={`ticket-${ticket._id}`} style={styles.ticketBody}>
           {/* Header */}
           <div style={styles.header}>
-            <h2 style={{ margin: 0, fontSize: "22px" }}>VÉ TÀU ĐIỆN TỬ</h2>
-            <div style={{ fontSize: "12px", opacity: 0.8 }}>Boarding Pass</div>
+            <h2 style={{ margin: 0, fontSize: "22px" }}>THẺ LÊN MÁY BAY</h2>
+            <div style={{ fontSize: "12px", opacity: 0.8 }}>Electronic Boarding Pass</div>
           </div>
           
           <div style={styles.infoContainer}>
@@ -72,8 +72,8 @@ function TicketQRCode({ ticket, onClose }) {
               </div>
 
               <div style={styles.row}>
-                <span style={styles.label}>Chuyến tàu / Train</span>
-                <div style={styles.value}>{ticket.train?.trainName || ticket.train?.name || "Tàu hỏa"}</div>
+                <span style={styles.label}>Chuyến bay / Flight</span>
+                <div style={styles.value}>{ticket.train?.flightNumber || ticket.train?.name || "Máy bay"}</div>
               </div>
 
               <div style={styles.row}>
@@ -83,7 +83,7 @@ function TicketQRCode({ ticket, onClose }) {
 
               <div style={styles.rowGrid}>
                 <div>
-                  <span style={styles.label}>Toa / Coach</span>
+                  <span style={styles.label}>Khoang / Cabin</span>
                   <div style={styles.valueLarge}>{ticket.coachNumber || "N/A"}</div>
                 </div>
                 <div>
@@ -103,7 +103,7 @@ function TicketQRCode({ ticket, onClose }) {
           </div>
 
           <div style={styles.footer}>
-            Xin quý khách vui lòng có mặt tại ga trước 30 phút để làm thủ tục.
+            Xin quý khách vui lòng có mặt tại sân bay trước 90 phút để làm thủ tục.
           </div>
         </div>
 

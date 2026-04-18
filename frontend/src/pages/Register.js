@@ -38,7 +38,7 @@ function Register() {
       <div className="auth-card">
         <p className="section-label">Tạo tài khoản</p>
         <h1>Đăng ký</h1>
-        <p className="auth-sub">Tạo tài khoản để bắt đầu đặt vé tàu.</p>
+        <p className="auth-sub">Tạo tài khoản để bắt đầu đặt vé máy bay.</p>
 
         <form onSubmit={handleRegister} className="auth-form">
           <label>Họ và tên</label>
