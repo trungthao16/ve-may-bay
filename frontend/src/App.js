@@ -26,13 +26,17 @@ import AdminSupport from "./pages/AdminSupport";
 
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
+import Seo from "./components/Seo";
+import { getSeoConfig } from "./seoConfig";
 
 function AppContent() {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith("/admin");
+  const seo = getSeoConfig(location.pathname);
 
   return (
     <>
+      <Seo {...seo} />
       {isAdminPage ? <AdminNavbar /> : <Navbar />}
       <Toaster
         position="top-right"

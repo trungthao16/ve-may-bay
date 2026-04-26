@@ -1,0 +1,239 @@
+/* =========================
+   ROUTES
+========================= */
+.routes-section{
+  padding: 72px 0 84px;
+  background: transparent;
+}
+
+.routes-grid{
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 20px;
+}
+
+.route-card{
+  min-height: 190px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.09);
+}
+
+.route-card.large{
+  min-height: 230px;
+  grid-column: span 2;
+}
+
+.route-overlay{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  padding: 24px;
+  color: #ffffff;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.08));
+}
+
+.route-overlay h3{
+  margin: 0 0 8px;
+  font-family: "Outfit", sans-serif;
+  font-size: 22px;
+}
+
+.route-overlay p{
+  margin: 0 0 10px;
+  color: rgba(15, 23, 42, 0.82);
+}
+
+.route-overlay span{
+  color: #75b0f3;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.route-badge{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #2f82e1;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.blue-red{
+  background: radial-gradient(circle at 20% 20%, #72a8d3, transparent 30%),
+              linear-gradient(135deg, #2d4f77, #474f58 55%, #4a78ad);
+}
+
+.green-blue{
+  background: radial-gradient(circle at 70% 40%, #73c9c7, transparent 28%),
+              linear-gradient(135deg, #2a6948, #233037);
+}
+
+.purple-gold{
+  background: radial-gradient(circle at 70% 30%, #84a5cb, transparent 25%),
+              linear-gradient(135deg, #63358d, #8d62b6 55%, #1f4f86);
+}
+
+.blue-green{
+  background: radial-gradient(circle at 72% 35%, #67bbcb, transparent 25%),
+              linear-gradient(135deg, #28496d, #4a9fbe 60%, #275343);
+}
+
+.green-lime{
+  background: radial-gradient(circle at 78% 30%, #709acb, transparent 25%),
+              linear-gradient(135deg, #305c28, #52a15a 55%, #2c5380);
+}
+
+.red-orange{
+  background: radial-gradient(circle at 70% 30%, #4f93e0, transparent 25%),
+              linear-gradient(135deg, #2e537d, #4e86c7 55%, #4380c6);
+}
+
+/* =========================
+   FEATURES
+========================= */
+.features-section{
+  padding: 82px 0 90px;
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)),
+    repeating-linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.03) 0,
+      rgba(15, 23, 42, 0.03) 1px,
+      transparent 1px,
+      transparent 42px
+    );
+}
+
+.features-grid{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 26px;
+  margin-top: 36px;
+}
+
+.feature-card{
+  text-align: center;
+  color: #ffffff;
+}
+
+.feature-icon{
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  background: rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 22px;
+  font-size: 28px;
+}
+
+.feature-card h3{
+  margin: 0 0 12px;
+  font-family: "Outfit", sans-serif;
+  font-size: 24px;
+}
+
+.feature-card p{
+  color: rgba(15, 23, 42, 0.72);
+  line-height: 1.7;
+  font-size: 17px;
+}
+
+.promo-card{
+  margin-top: 58px;
+  background: linear-gradient(135deg, #3d7fca, #468bd9 60%, #3673b9);
+  border-radius: 28px;
+  padding: 44px 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.2);
+}
+
+.promo-label{
+  margin: 0 0 14px;
+  color: #e3eefc;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.promo-card h3{
+  margin: 0;
+  color: #ffffff;
+  font-family: "Outfit", sans-serif;
+  font-size: clamp(38px, 5vw, 66px);
+  line-height: 0.95;
+}
+
+.promo-card h3 span{
+  color: #90c4ff;
+}
+
+.promo-desc{
+  margin-top: 16px;
+  color: rgba(15, 23, 42, 0.88);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.promo-btn{
+  background: #69a8f0;
+  color: #101a25;
+  padding: 18px 34px;
+  font-size: 22px;
+}
+
+.promo-btn:hover{
+  transform: translateY(-1px);
+  opacity: 0.96;
+}
+
+/* =========================
+   SEATS
+========================= */
+.seats-section{
+  padding: 82px 0 92px;
+  background: transparent;
+}
+
+.seat-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.seat-card{
+  padding: 34px;
+  min-height: 290px;
+}
+
+.seat-icon{
+  font-size: 42px;
+  margin-bottom: 18px;
+}
+
+.seat-card h3{
+  margin: 0 0 14px;
+  font-family: "Outfit", sans-serif;
+  font-size: 28px;
+}
+
+.seat-card p{
+  margin: 0;
+  color: #575f69;
+  font-size: 18px;
+  line-height: 1.7;
+}
+

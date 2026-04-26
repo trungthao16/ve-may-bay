@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import API from "../api/axios";
-import TicketQRCode from "../components/TicketQRCode";
-import CancelTicketModal from "../components/CancelTicketModal";
 import toast from "react-hot-toast";
+import API from "../api/axios";
+import CancelTicketModal from "../components/CancelTicketModal";
+import TicketQRCode from "../components/TicketQRCode";
 
 function MyTickets() {
   const [tickets, setTickets] = useState([]);
@@ -35,7 +35,7 @@ function MyTickets() {
     const paymentStatus = params.get("payment");
 
     if (paymentStatus === "success") {
-      toast.success("🎉 Thanh toán VNPay thành công!");
+      toast.success("Thanh toán VNPay thành công!");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -59,10 +59,6 @@ function MyTickets() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCancelClick = (ticket) => {
-    setTicketToCancel(ticket);
   };
 
   const confirmCancel = async () => {
@@ -94,40 +90,15 @@ function MyTickets() {
     }
   };
 
-  const renderPaymentText = (ticket) => {
-    if (ticket.paymentStatus === "paid") return "Đã thanh toán";
-    if (ticket.paymentStatus === "failed") return "Thanh toán thất bại";
-    return "Chưa thanh toán";
-  };
-
-
-  const groupedOrders = [];
-  if (tickets && tickets.length > 0) {
-    let currentGroup = [tickets[0]];
-    groupedOrders.push(currentGroup);
-
-    for (let i = 1; i < tickets.length; i++) {
-      const prevTicket = currentGroup[currentGroup.length - 1];
-      const currTicket = tickets[i];
-      const timeDiff = prevTicket.createdAt && currTicket.createdAt ? Math.abs(new Date(prevTicket.createdAt) - new Date(currTicket.createdAt)) : 0;
-
-      if (timeDiff < 5000) {
-        currentGroup.push(currTicket);
-      } else {
-        currentGroup = [currTicket];
-        groupedOrders.push(currentGroup);
-      }
-    }
-  }
-
   const handleVNPayGroup = async (groupTickets) => {
     const unpaidTickets = groupTickets.filter(
-      (t) => t.status !== "cancelled" && t.paymentStatus !== "paid"
+      (ticket) => ticket.status !== "cancelled" && ticket.paymentStatus !== "paid"
     );
+
     if (unpaidTickets.length === 0) return;
 
     try {
-      const ticketIds = unpaidTickets.map((t) => t._id);
+      const ticketIds = unpaidTickets.map((ticket) => ticket._id);
       const res = await API.post("/payment/create-vnpay", { ticketIds });
 
       if (res.data?.paymentUrl) {
@@ -141,6 +112,34 @@ function MyTickets() {
     }
   };
 
+  const renderPaymentText = (ticket) => {
+    if (ticket.paymentStatus === "paid") return "Đã thanh toán";
+    if (ticket.paymentStatus === "failed") return "Thanh toán thất bại";
+    return "Chưa thanh toán";
+  };
+
+  const groupedOrders = [];
+  if (tickets.length > 0) {
+    let currentGroup = [tickets[0]];
+    groupedOrders.push(currentGroup);
+
+    for (let i = 1; i < tickets.length; i += 1) {
+      const previousTicket = currentGroup[currentGroup.length - 1];
+      const currentTicket = tickets[i];
+      const timeDiff =
+        previousTicket.createdAt && currentTicket.createdAt
+          ? Math.abs(new Date(previousTicket.createdAt) - new Date(currentTicket.createdAt))
+          : 0;
+
+      if (timeDiff < 5000) {
+        currentGroup.push(currentTicket);
+      } else {
+        currentGroup = [currentTicket];
+        groupedOrders.push(currentGroup);
+      }
+    }
+  }
+
   if (!user) {
     return (
       <div className="rv-container mytickets-page">
@@ -151,9 +150,9 @@ function MyTickets() {
 
   return (
     <div className="rv-container mytickets-page">
-      <div className="trainlist-header">
+      <div className="flightlist-header mytickets-header">
         <p className="section-label">Quản lý vé</p>
-        <h1 className="trainlist-title">Vé của tôi</h1>
+        <h1 className="flightlist-title mytickets-title">Vé của tôi</h1>
       </div>
 
       {loading ? (
@@ -161,26 +160,44 @@ function MyTickets() {
       ) : groupedOrders.length === 0 ? (
         <div className="empty-box">Bạn chưa đặt vé nào.</div>
       ) : (
-        <div className="orders-container" style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-          {groupedOrders.map((group, gIndex) => {
-            const groupUnpaidCount = group.filter(t => t.paymentStatus !== "paid" && t.status !== "cancelled").length;
-            const groupUnpaidTotal = group.filter(t => t.paymentStatus !== "paid" && t.status !== "cancelled").reduce((s, t) => s + Number(t.price), 0);
+        <div className="orders-container">
+          {groupedOrders.map((group, groupIndex) => {
+            const unpaidTickets = group.filter(
+              (ticket) => ticket.paymentStatus !== "paid" && ticket.status !== "cancelled"
+            );
+            const unpaidTotal = unpaidTickets.reduce(
+              (sum, ticket) => sum + Number(ticket.price || 0),
+              0
+            );
 
             return (
-              <div key={gIndex} className="order-group" style={{ background: '#fafafa', border: '1px solid #eaeaea', borderRadius: '12px', padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '15px', borderBottom: '2px solid #ddd' }}>
+              <div key={groupIndex} className="order-group">
+                <div className="order-group__header">
                   <div>
-                    <h3 style={{ margin: '0 0 5px 0' }}>Ngày đặt: {group[0].createdAt ? new Date(group[0].createdAt).toLocaleString("vi-VN") : "Không xác định"}</h3>
-                    <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Bao gồm {group.length} vé</p>
+                    <h3 className="order-group__title">
+                      Ngày đặt:{" "}
+                      {group[0].createdAt
+                        ? new Date(group[0].createdAt).toLocaleString("vi-VN")
+                        : "Không xác định"}
+                    </h3>
+                    <p className="order-group__meta">Bao gồm {group.length} vé</p>
                   </div>
 
-                  {groupUnpaidCount > 0 && (
-                    <div style={{ background: '#fff3cd', padding: '10px 15px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '15px', border: '1px solid #ffeeba' }}>
+                  {unpaidTickets.length > 0 && (
+                    <div className="order-group__payment">
                       <div>
-                        <span style={{ fontSize: '13px', color: '#856404' }}>Chưa thanh toán ({groupUnpaidCount} vé)</span>
-                        <div style={{ fontWeight: 'bold', color: '#c9503a', fontSize: '16px' }}>{groupUnpaidTotal.toLocaleString()}đ</div>
+                        <span className="order-group__payment-label">
+                          Chưa thanh toán ({unpaidTickets.length} vé)
+                        </span>
+                        <div className="order-group__payment-total">
+                          {unpaidTotal.toLocaleString("vi-VN")}đ
+                        </div>
                       </div>
-                      <button onClick={() => handleVNPayGroup(group)} style={{ background: '#c9503a', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                      <button
+                        type="button"
+                        className="order-group__payment-button"
+                        onClick={() => handleVNPayGroup(group)}
+                      >
                         Thanh toán
                       </button>
                     </div>
@@ -189,23 +206,33 @@ function MyTickets() {
 
                 <div className="ticket-grid">
                   {group.map((ticket) => (
-                    <div className="ticket-card" key={ticket._id} style={{ background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                    <div className="ticket-card ticket-card--elevated" key={ticket._id}>
                       <div className="ticket-status">
                         {ticket.status === "cancelled" ? "Đã hủy" : "Đã đặt"}
                       </div>
 
-                      <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{ticket.train?.name || ticket.train?.flightNumber || "Chuyến bay"}</h3>
+                      <h3 className="ticket-card__title">
+                        {ticket.train?.name || ticket.train?.flightNumber || "Chuyến bay"}
+                      </h3>
 
                       <p>
-                        <strong>Mã vé:</strong> <span style={{ fontWeight: "bold", color: "#007bff" }}>#{String(ticket._id).slice(-6).toUpperCase()}</span>
+                        <strong>Mã vé:</strong>{" "}
+                        <span className="ticket-code">#{String(ticket._id).slice(-6).toUpperCase()}</span>
                       </p>
 
-                      <div style={{ background: '#f5f9ff', padding: '10px', borderRadius: '6px', margin: '10px 0', border: '1px dashed #bee5eb' }}>
-                        <p style={{ margin: '0 0 5px 0', color: '#0c5460' }}>
-                          <strong>👤 KH:</strong> {ticket.passengerName || "Trống"}
+                      <div className="ticket-passenger-box">
+                        <p className="ticket-passenger-box__row">
+                          <strong>KH:</strong> {ticket.passengerName || "Trống"}
                         </p>
-                        <p style={{ margin: '0', color: '#0c5460', fontSize: '13px' }}>
-                          <strong>CCCD:</strong> {ticket.cccd || "Trống"} | <strong>Loại:</strong> {ticket.passengerType === 'child' ? 'Trẻ em' : ticket.passengerType === 'student' ? 'Sinh viên' : ticket.passengerType === 'senior' ? 'Người cao tuổi' : 'Người lớn'}
+                        <p className="ticket-passenger-box__subrow">
+                          <strong>CCCD:</strong> {ticket.cccd || "Trống"} | <strong>Loại:</strong>{" "}
+                          {ticket.passengerType === "child"
+                            ? "Trẻ em"
+                            : ticket.passengerType === "student"
+                              ? "Sinh viên"
+                              : ticket.passengerType === "senior"
+                                ? "Người cao tuổi"
+                                : "Người lớn"}
                         </p>
                       </div>
 
@@ -218,57 +245,51 @@ function MyTickets() {
                       </p>
 
                       <p>
-                        <strong>Khởi hành:</strong>{" "}
-                        {ticket.train?.departureTime || "Chưa có"} - {ticket.train?.departureDate ? new Date(ticket.train.departureDate).toLocaleDateString("vi-VN") : "Chưa có"}
+                        <strong>Khởi hành:</strong> {ticket.train?.departureTime || "Chưa có"} -{" "}
+                        {ticket.train?.departureDate
+                          ? new Date(ticket.train.departureDate).toLocaleDateString("vi-VN")
+                          : "Chưa có"}
                       </p>
 
                       {ticket.discountAmount > 0 ? (
-                        <div style={{ marginBottom: "10px", padding: "8px", backgroundColor: "#f9f9f9", borderRadius: "8px", border: "1px dashed #ccc" }}>
-                          <p style={{ margin: "4px 0" }}>
+                        <div className="ticket-price-breakdown">
+                          <p className="ticket-price-breakdown__row">
                             <strong>Giá gốc:</strong>{" "}
-                            <span style={{ textDecoration: "line-through", color: "#888" }}>
+                            <span className="ticket-price-breakdown__original">
                               {(ticket.originalPrice || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
                             </span>
                           </p>
-                          <p style={{ margin: "4px 0", color: "#28a745" }}>
-                            <strong>Giảm giá:</strong> -{(ticket.discountAmount).toLocaleString("vi-VN")}đ
+                          <p className="ticket-price-breakdown__discount">
+                            <strong>Giảm giá:</strong> -{Number(ticket.discountAmount).toLocaleString("vi-VN")}đ
                             {ticket.promotionCode && (
-                              <span style={{ backgroundColor: "#28a745", color: "white", padding: "2px 6px", borderRadius: "10px", fontSize: "11px", marginLeft: "6px" }}>
-                                {ticket.promotionCode}
-                              </span>
+                              <span className="ticket-price-breakdown__badge">{ticket.promotionCode}</span>
                             )}
                           </p>
-                          <p style={{ margin: "4px 0" }}>
+                          <p className="ticket-price-breakdown__row">
                             <strong>Thành tiền:</strong>{" "}
-                            <span style={{ color: "#d9534f", fontWeight: "bold", fontSize: "1.1em" }}>
-                              {(ticket.price || 0).toLocaleString("vi-VN")}đ
+                            <span className="ticket-price-breakdown__final">
+                              {Number(ticket.price || 0).toLocaleString("vi-VN")}đ
                             </span>
                           </p>
                         </div>
                       ) : (
                         <p>
                           <strong>Giá vé:</strong>{" "}
-                          <span style={{ color: "#d9534f", fontWeight: "bold", fontSize: "1.1em" }}>
-                            {(ticket.price || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
+                          <span className="ticket-price-breakdown__final">
+                            {Number(ticket.price || ticket.train?.price || 0).toLocaleString("vi-VN")}đ
                           </span>
                         </p>
                       )}
 
-                      <p style={{ marginTop: '10px' }}>
+                      <p className="ticket-payment-status">
                         <strong>TT:</strong> {renderPaymentText(ticket)}
                       </p>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "10px",
-                          marginTop: "12px",
-                          flexWrap: "wrap",
-                        }}
-                      >
+                      <div className="ticket-actions">
                         {ticket.status !== "cancelled" && ticket.paymentStatus !== "paid" && (
                           <button
-                            className="cancel-btn"
+                            type="button"
+                            className="cancel-btn ticket-action-btn"
                             onClick={() => handleVNPay(ticket._id)}
                           >
                             Thanh toán lẻ
@@ -277,18 +298,19 @@ function MyTickets() {
 
                         {ticket.status !== "cancelled" && ticket.paymentStatus === "paid" && (
                           <button
-                            className="cancel-btn"
-                            style={{ background: "#c9503a", color: "#fff", border: "none" }}
+                            type="button"
+                            className="cancel-btn ticket-action-btn ticket-action-btn--primary"
                             onClick={() => setSelectedTicket(ticket)}
                           >
-                            🎟️ Xem vé điện tử
+                            Xem vé điện tử
                           </button>
                         )}
 
                         {ticket.status !== "cancelled" && (
                           <button
-                            className="cancel-btn"
-                            onClick={() => handleCancelClick(ticket)}
+                            type="button"
+                            className="cancel-btn ticket-action-btn"
+                            onClick={() => setTicketToCancel(ticket)}
                           >
                             Hủy vé
                           </button>
@@ -303,15 +325,10 @@ function MyTickets() {
         </div>
       )}
 
-      {/* Tích hợp Modal sinh E-Ticket */}
       {selectedTicket && (
-        <TicketQRCode
-          ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-        />
+        <TicketQRCode ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
       )}
 
-      {/* Tích hợp Modal Xác nhận hủy vé Đẹp */}
       {ticketToCancel && (
         <CancelTicketModal
           ticket={ticketToCancel}

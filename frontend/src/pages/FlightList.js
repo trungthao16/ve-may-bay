@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
@@ -26,7 +26,6 @@ function FlightList() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("time-asc");
 
-  // State for roundtrip selection
   const [selectedOutbound, setSelectedOutbound] = useState(null);
   const [selectedReturn, setSelectedReturn] = useState(null);
 
@@ -36,26 +35,31 @@ function FlightList() {
   const fromRef = useRef(null);
   const toRef = useRef(null);
 
-  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (fromRef.current && !fromRef.current.contains(e.target)) setShowFromDropdown(false);
-      if (toRef.current && !toRef.current.contains(e.target)) setShowToDropdown(false);
+    const handleClickOutside = (event) => {
+      if (fromRef.current && !fromRef.current.contains(event.target)) {
+        setShowFromDropdown(false);
+      }
+
+      if (toRef.current && !toRef.current.contains(event.target)) {
+        setShowToDropdown(false);
+      }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch danh sách sân bay từ DB
   useEffect(() => {
     const fetchAirports = async () => {
       try {
         const res = await API.get("/flights/airports");
         setAirports(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error("Lỗi lấy danh sách sân bay:", err);
+      } catch (error) {
+        console.error("Lỗi lấy danh sách sân bay:", error);
       }
     };
+
     fetchAirports();
   }, []);
 
@@ -73,9 +77,9 @@ function FlightList() {
         };
 
         const resGo = await API.get("/flights/search", { params: paramsGo });
-        let finalGoTrips = Array.isArray(resGo.data) ? resGo.data : [];
+        const nextOutboundFlights = Array.isArray(resGo.data) ? resGo.data : [];
 
-        let backTrips = [];
+        let nextReturnFlights = [];
         if (initialTripType === "roundtrip") {
           const paramsBack = {
             from: initialTo,
@@ -83,27 +87,25 @@ function FlightList() {
             tripType: initialTripType,
             groupSize: initialGroupSize,
           };
+
           if (initialReturnDate) {
             paramsBack.date = initialReturnDate;
           }
+
           const resBack = await API.get("/flights/search", { params: paramsBack });
-          backTrips = Array.isArray(resBack.data) ? resBack.data : [];
+          nextReturnFlights = Array.isArray(resBack.data) ? resBack.data : [];
         }
 
-        setOutboundFlights(finalGoTrips);
-        setReturnFlights(backTrips);
-
+        setOutboundFlights(nextOutboundFlights);
+        setReturnFlights(nextReturnFlights);
         setSearchFrom(initialFrom);
         setSearchTo(initialTo);
         setSearchDate(initialDate);
         setSearchTripType(initialTripType);
         setSearchReturnDate(initialReturnDate);
         setSearchGroupSize(initialGroupSize);
-
-        // Reset selection when search changes
         setSelectedOutbound(null);
         setSelectedReturn(null);
-
       } catch (error) {
         console.error("Lỗi lấy danh sách chuyến bay:", error);
         setOutboundFlights([]);
@@ -114,10 +116,21 @@ function FlightList() {
     };
 
     fetchFlights();
-  }, [initialFrom, initialTo, initialDate, initialReturnDate, initialTripType, initialGroupSize]);
+  }, [initialDate, initialFrom, initialGroupSize, initialReturnDate, initialTo, initialTripType]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  const filteredFromAirports = useMemo(
+    () => airports.filter((airport) => airport.toLowerCase().includes(searchFrom.toLowerCase())),
+    [airports, searchFrom]
+  );
+
+  const filteredToAirports = useMemo(
+    () => airports.filter((airport) => airport.toLowerCase().includes(searchTo.toLowerCase())),
+    [airports, searchTo]
+  );
+
+  const handleSearch = (event) => {
+    event.preventDefault();
+
     const params = {
       from: searchFrom,
       to: searchTo,
@@ -128,65 +141,99 @@ function FlightList() {
     if (searchTripType === "roundtrip") {
       params.returnDate = searchReturnDate;
     }
+
     if (searchTripType === "group") {
       params.groupSize = searchGroupSize;
     }
 
-    const queryString = new URLSearchParams(params).toString();
-    navigate(`/flights?${queryString}`);
+    navigate(`/flights?${new URLSearchParams(params).toString()}`);
+  };
+
+  const handleTripTypeChange = (value) => {
+    setSearchTripType(value);
+
+    const params = {
+      from: searchFrom,
+      to: searchTo,
+      date: searchDate,
+      tripType: value,
+    };
+
+    if (value === "roundtrip") {
+      params.returnDate = searchReturnDate;
+    }
+
+    if (value === "group") {
+      params.groupSize = searchGroupSize;
+    }
+
+    navigate(`/flights?${new URLSearchParams(params).toString()}`);
   };
 
   const swapStations = () => {
-    const temp = searchFrom;
     setSearchFrom(searchTo);
-    setSearchTo(temp);
+    setSearchTo(searchFrom);
   };
 
-  const sortFlights = (flightList) => {
-    return [...flightList].sort((a, b) => {
-      // Luôn sắp xếp theo ngày khởi hành trước (ngày gần nhất lên đầu)
+  const sortFlights = (flightList) =>
+    [...flightList].sort((a, b) => {
       const dateA = new Date(a.departureDate || 0);
       const dateB = new Date(b.departureDate || 0);
-      if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
 
-      // Cùng ngày thì sắp theo tiêu chí người dùng chọn
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA - dateB;
+      }
+
       if (sortBy === "price-asc") return (a.price || 0) - (b.price || 0);
       if (sortBy === "price-desc") return (b.price || 0) - (a.price || 0);
       if (sortBy === "time-asc") return (a.departureTime || "").localeCompare(b.departureTime || "");
       if (sortBy === "time-desc") return (b.departureTime || "").localeCompare(a.departureTime || "");
       return 0;
     });
-  };
+
+  const renderAirportDropdown = (items, onSelect) => (
+    <div className="airport-dropdown">
+      {items.length > 0 ? (
+        items.map((airport) => (
+          <button
+            key={airport}
+            type="button"
+            className="airport-dropdown__item"
+            onClick={() => onSelect(airport)}
+          >
+            {airport}
+          </button>
+        ))
+      ) : (
+        <div className="airport-dropdown__empty">Không tìm thấy sân bay phù hợp</div>
+      )}
+    </div>
+  );
 
   const renderFlightCard = (flight, isReturn = false) => {
     const total = flight.totalSeats || flight.seats || 0;
-    const avail = flight.availableSeats !== undefined ? flight.availableSeats : total;
-
-    let badgeText = "Còn chỗ";
-    let badgeColor = "#28a745"; // xanh lá
-
-    if (avail <= 0) {
-      badgeText = "Hết chỗ";
-      badgeColor = "#dc3545"; // đỏ
-    } else if (avail <= 10) {
-      badgeText = "Sắp đầy";
-      badgeColor = "#fd7e14"; // cam
-    }
-
+    const available = flight.availableSeats !== undefined ? flight.availableSeats : total;
     const isSelected = isReturn ? selectedReturn === flight._id : selectedOutbound === flight._id;
 
+    let badgeText = "Còn chỗ";
+    let badgeClass = "flight-badge";
+
+    if (available <= 0) {
+      badgeText = "Hết chỗ";
+      badgeClass = "flight-badge flight-badge--soldout";
+    } else if (available <= 10) {
+      badgeText = "Sắp đầy";
+      badgeClass = "flight-badge flight-badge--limited";
+    }
+
     return (
-      <div className="flight-card" key={flight._id} style={isSelected ? { border: '2px solid #4ca37d', background: '#f5fff9', boxShadow: '0 4px 15px rgba(76, 163, 125, 0.2)' } : {}}>
+      <div className={`flight-card ${isSelected ? "flight-card--selected" : ""}`} key={flight._id}>
         <div className="flight-top">
           <div>
-            <span className="flight-badge" style={{ backgroundColor: badgeColor }}>
-              {badgeText}
-            </span>
+            <span className={badgeClass}>{badgeText}</span>
             <h3>{flight.flightNumber || flight.name || "Chuyến bay"}</h3>
           </div>
-          <div className="flight-price">
-            {Number(flight.price || 0).toLocaleString("vi-VN")}đ
-          </div>
+          <div className="flight-price">{Number(flight.price || 0).toLocaleString("vi-VN")}đ</div>
         </div>
 
         <div className="flight-route">
@@ -210,111 +257,126 @@ function FlightList() {
                 : "Chưa có"}
             </strong>
           </div>
-
           <div>
             <span>Giờ bay</span>
             <strong>{flight.departureTime || "Chưa có"}</strong>
           </div>
-
           <div>
             <span>Hạ cánh</span>
             <strong>{flight.arrivalTime || "Chưa có"}</strong>
           </div>
-
           <div>
             <span>Ghế trống</span>
-            <strong>{avail} / {total}</strong>
+            <strong>
+              {available} / {total}
+            </strong>
           </div>
         </div>
 
         {initialTripType === "roundtrip" ? (
           <button
-            className="book-btn"
-            disabled={avail <= 0}
-            style={{
-              opacity: avail <= 0 ? 0.6 : 1,
-              cursor: avail <= 0 ? "not-allowed" : "pointer",
-              background: isSelected ? '#fff' : '',
-              color: isSelected ? '#4ca37d' : '',
-              border: isSelected ? '1px solid #4ca37d' : ''
-            }}
+            className={`book-btn ${isSelected ? "book-btn--selected" : ""}`}
+            disabled={available <= 0}
             onClick={() => {
-              if (isReturn) setSelectedReturn(flight._id);
-              else setSelectedOutbound(flight._id);
+              if (isReturn) {
+                setSelectedReturn(flight._id);
+              } else {
+                setSelectedOutbound(flight._id);
+              }
             }}
           >
-            {avail <= 0 ? "Đã bán hết" : isSelected ? "Đã Chọn" : (isReturn ? "Chọn Chiều Về" : "Chọn Chiều Đi")}
+            {available <= 0
+              ? "Đã bán hết"
+              : isSelected
+                ? "Đã chọn"
+                : isReturn
+                  ? "Chọn chiều về"
+                  : "Chọn chiều đi"}
           </button>
         ) : (
           <button
             className="book-btn"
-            disabled={avail <= 0}
-            style={{ opacity: avail <= 0 ? 0.6 : 1, cursor: avail <= 0 ? "not-allowed" : "pointer" }}
+            disabled={available <= 0}
             onClick={() => navigate(`/booking/${flight._id}`)}
           >
-            {avail <= 0 ? "Đã bán hết" : "Đặt chỗ ngay"}
+            {available <= 0 ? "Đã bán hết" : "Đặt chỗ ngay"}
           </button>
         )}
       </div>
     );
   };
 
-  return (
-    <div className="FlightList-page">
+  const chosenOutbound = outboundFlights.find((item) => item._id === selectedOutbound);
 
-      <div className="rv-container FlightList-wrap">
-        <div className="search-box" style={{ marginBottom: "40px" }}>
+  const filteredReturnFlights = useMemo(() => {
+    if (!chosenOutbound) {
+      return [];
+    }
+
+    let earliestReturnTime = null;
+
+    if (chosenOutbound.departureDate) {
+      const outboundDate = new Date(chosenOutbound.departureDate);
+      const [arriveHour, arriveMinute] = (chosenOutbound.arrivalTime || "23:59")
+        .split(":")
+        .map(Number);
+      earliestReturnTime = new Date(outboundDate);
+      earliestReturnTime.setHours(arriveHour + 3, arriveMinute, 0, 0);
+    }
+
+    return returnFlights.filter((flight) => {
+      const matchRoute =
+        flight.from === (chosenOutbound.to || initialTo) &&
+        flight.to === (chosenOutbound.from || initialFrom);
+
+      if (!matchRoute) {
+        return false;
+      }
+
+      if (!earliestReturnTime || !flight.departureDate) {
+        return true;
+      }
+
+      const returnDate = new Date(flight.departureDate);
+      const [returnHour, returnMinute] = (flight.departureTime || "00:00").split(":").map(Number);
+      returnDate.setHours(returnHour, returnMinute, 0, 0);
+
+      return returnDate >= earliestReturnTime;
+    });
+  }, [chosenOutbound, initialFrom, initialTo, returnFlights]);
+
+  return (
+    <div className="flightlist-page">
+      <div className="rv-container flightlist-wrap">
+        <div className="search-box search-box--spaced">
           <form className="flightlist-search-form" onSubmit={handleSearch}>
             <div className="field">
               <label>Loại vé</label>
-              <select value={searchTripType} onChange={(e) => {
-                 const newType = e.target.value;
-                 setSearchTripType(newType);
-                 
-                 const params = {
-                   from: searchFrom,
-                   to: searchTo,
-                   date: searchDate,
-                   tripType: newType,
-                 };
-                 if (newType === "roundtrip") params.returnDate = searchReturnDate;
-                 if (newType === "group") params.groupSize = searchGroupSize;
-                 navigate(`/flights?${new URLSearchParams(params).toString()}`);
-              }}>
+              <select value={searchTripType} onChange={(e) => handleTripTypeChange(e.target.value)}>
                 <option value="oneway">Một chiều</option>
                 <option value="roundtrip">Khứ hồi</option>
                 <option value="group">Đoàn</option>
               </select>
             </div>
 
-            <div className="field" ref={fromRef} style={{ position: 'relative' }}>
+            <div className="field field--relative" ref={fromRef}>
               <label>Sân bay đi</label>
               <input
                 type="text"
                 value={searchFrom}
-                onChange={(e) => { setSearchFrom(e.target.value); setShowFromDropdown(true); }}
+                onChange={(e) => {
+                  setSearchFrom(e.target.value);
+                  setShowFromDropdown(true);
+                }}
                 onFocus={() => setShowFromDropdown(true)}
                 placeholder="Nhập hoặc chọn sân bay đi..."
                 autoComplete="off"
               />
-              {showFromDropdown && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '0 0 8px 8px', maxHeight: '200px', overflowY: 'auto', zIndex: 999, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  {airports.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).map(s => (
-                    <div
-                      key={s}
-                      onClick={() => { setSearchFrom(s); setShowFromDropdown(false); }}
-                      style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f0f0f0' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f5f0eb'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
-                    >
-                      {s}
-                    </div>
-                  ))}
-                  {airports.filter(s => s.toLowerCase().includes(searchFrom.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy sân bay phù hợp</div>
-                  )}
-                </div>
-              )}
+              {showFromDropdown &&
+                renderAirportDropdown(filteredFromAirports, (airport) => {
+                  setSearchFrom(airport);
+                  setShowFromDropdown(false);
+                })}
             </div>
 
             <button
@@ -326,34 +388,24 @@ function FlightList() {
               ⇄
             </button>
 
-            <div className="field" ref={toRef} style={{ position: 'relative' }}>
+            <div className="field field--relative" ref={toRef}>
               <label>Sân bay đến</label>
               <input
                 type="text"
                 value={searchTo}
-                onChange={(e) => { setSearchTo(e.target.value); setShowToDropdown(true); }}
+                onChange={(e) => {
+                  setSearchTo(e.target.value);
+                  setShowToDropdown(true);
+                }}
                 onFocus={() => setShowToDropdown(true)}
                 placeholder="Nhập hoặc chọn sân bay đến..."
                 autoComplete="off"
               />
-              {showToDropdown && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ddd', borderRadius: '0 0 8px 8px', maxHeight: '200px', overflowY: 'auto', zIndex: 999, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  {airports.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).map(s => (
-                    <div
-                      key={s}
-                      onClick={() => { setSearchTo(s); setShowToDropdown(false); }}
-                      style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderBottom: '1px solid #f0f0f0' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f5f0eb'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
-                    >
-                      {s}
-                    </div>
-                  ))}
-                  {airports.filter(s => s.toLowerCase().includes(searchTo.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '10px 14px', color: '#999', fontSize: '13px' }}>Không tìm thấy sân bay phù hợp</div>
-                  )}
-                </div>
-              )}
+              {showToDropdown &&
+                renderAirportDropdown(filteredToAirports, (airport) => {
+                  setSearchTo(airport);
+                  setShowToDropdown(false);
+                })}
             </div>
 
             <div className="field">
@@ -364,29 +416,38 @@ function FlightList() {
             {searchTripType === "roundtrip" && (
               <div className="field">
                 <label>Ngày về</label>
-                <input type="date" value={searchReturnDate} onChange={(e) => setSearchReturnDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={searchReturnDate}
+                  onChange={(e) => setSearchReturnDate(e.target.value)}
+                />
               </div>
             )}
 
             {searchTripType === "group" && (
               <div className="field">
                 <label>Số người</label>
-                <input type="number" value={searchGroupSize} onChange={(e) => setSearchGroupSize(e.target.value)} placeholder="VD: 20" />
+                <input
+                  type="number"
+                  value={searchGroupSize}
+                  onChange={(e) => setSearchGroupSize(e.target.value)}
+                  placeholder="VD: 20"
+                />
               </div>
             )}
 
             <button type="submit" className="search-btn">
-              Tìm Kiếm
+              Tìm kiếm
             </button>
           </form>
         </div>
 
-        <div className="FlightList-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div className="flightlist-header flightlist-header--split">
           <div>
             <p className="section-label">Kết quả tìm kiếm</p>
-            <h1 className="FlightList-title">Danh sách chuyến bay</h1>
+            <h1 className="flightlist-title">Danh sách chuyến bay</h1>
           </div>
-          <div className="field" style={{ minWidth: "220px", marginBottom: "0" }}>
+          <div className="field flightlist-sort-field">
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="time-asc">Giờ đi sớm nhất</option>
               <option value="time-desc">Giờ đi muộn nhất</option>
@@ -397,119 +458,87 @@ function FlightList() {
         </div>
 
         {loading ? (
-          <div className="empty-box">
+          <div className="empty-box empty-box--loading">
             <div className="loading-spinner"></div>
             <p>Đang tải dữ liệu chuyến bay...</p>
           </div>
         ) : (
           <>
-            {/* BƯỚC 1: Hiển thị chuyến đi (khi chưa chọn hoặc không phải roundtrip) */}
             {(!initialTripType || initialTripType !== "roundtrip" || !selectedOutbound) && (
               <>
-                <h2 style={{ marginBottom: "12px" }}>
-                  {initialTripType === "roundtrip" ? "Bước 1: " : ""}Chuyến đi ({initialFrom || "Tất cả"} → {initialTo || "Tất cả"})
+                <h2 className="flightlist-step-title">
+                  {initialTripType === "roundtrip" ? "Bước 1: " : ""}
+                  Chuyến đi ({initialFrom || "Tất cả"} → {initialTo || "Tất cả"})
                 </h2>
 
                 {outboundFlights.length === 0 ? (
                   <div className="empty-box">Không có chuyến đi phù hợp.</div>
                 ) : (
                   <div className="flight-grid">
-                    {sortFlights(outboundFlights).map((flight) => renderFlightCard(flight, false))}
+                    {sortFlights(outboundFlights).map((flight) => renderFlightCard(flight))}
                   </div>
                 )}
               </>
             )}
 
-            {/* BƯỚC 2: Hiển thị chuyến về (khi đã chọn chuyến đi trong roundtrip) */}
-            {initialTripType === "roundtrip" && selectedOutbound && (() => {
-              const chosenOutbound = outboundFlights.find(t => t._id === selectedOutbound);
-              
-              // Tính thời điểm sớm nhất có thể về = ngày đi + giờ đến + 3 tiếng
-              let earliestReturnTime = null;
-              if (chosenOutbound?.departureDate) {
-                const outDate = new Date(chosenOutbound.departureDate);
-                const [arrH, arrM] = (chosenOutbound.arrivalTime || "23:59").split(":").map(Number);
-                earliestReturnTime = new Date(outDate);
-                earliestReturnTime.setHours(arrH + 3, arrM, 0, 0); // +3 tiếng sau giờ đến
-              }
-
-              const filteredReturn = returnFlights.filter(t => {
-                const matchRoute = t.from === (chosenOutbound?.to || initialTo) && 
-                                   t.to === (chosenOutbound?.from || initialFrom);
-                if (!matchRoute) return false;
-                if (!earliestReturnTime || !t.departureDate) return true;
-
-                const retDate = new Date(t.departureDate);
-                const [retH, retM] = (t.departureTime || "00:00").split(":").map(Number);
-                const retDateTime = new Date(retDate);
-                retDateTime.setHours(retH, retM, 0, 0);
-
-                return retDateTime >= earliestReturnTime;
-              });
-
-              return (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => { setSelectedOutbound(null); setSelectedReturn(null); window.scrollTo({ top: 300, behavior: 'smooth' }); }}
-                      style={{ background: '#fff', border: '1px solid #c9503a', color: '#c9503a', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      ← Quay lại chọn chiều đi
-                    </button>
-                    <div style={{ background: '#dff4e3', color: '#247046', padding: '8px 14px', borderRadius: '10px', fontSize: '14px', fontWeight: '600' }}>
-                      ✓ Chiều đi: {chosenOutbound?.flightNumber} ({chosenOutbound?.from} → {chosenOutbound?.to}) - {chosenOutbound?.departureTime}
-                    </div>
+            {initialTripType === "roundtrip" && selectedOutbound && (
+              <>
+                <div className="flightlist-step-toolbar">
+                  <button
+                    type="button"
+                    className="flightlist-step-back"
+                    onClick={() => {
+                      setSelectedOutbound(null);
+                      setSelectedReturn(null);
+                      window.scrollTo({ top: 300, behavior: "smooth" });
+                    }}
+                  >
+                    ← Quay lại chọn chiều đi
+                  </button>
+                  <div className="flightlist-selected-summary">
+                    Chiều đi: {chosenOutbound?.flightNumber} ({chosenOutbound?.from} → {chosenOutbound?.to}) -{" "}
+                    {chosenOutbound?.departureTime}
                   </div>
+                </div>
 
-                  <h2 style={{ marginBottom: "12px" }}>
-                    Bước 2: Chuyến về ({chosenOutbound?.to || "Tất cả"} → {chosenOutbound?.from || "Tất cả"})
-                  </h2>
+                <h2 className="flightlist-step-title">
+                  Bước 2: Chuyến về ({chosenOutbound?.to || "Tất cả"} → {chosenOutbound?.from || "Tất cả"})
+                </h2>
 
-                  {filteredReturn.length === 0 ? (
-                    <div className="empty-box">Không có chuyến về phù hợp từ {chosenOutbound?.to} về {chosenOutbound?.from}.</div>
-                  ) : (
-                    <div className="train-grid">
-                      {sortFlights(filteredReturn).map((flight) => renderFlightCard(flight, true))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+                {filteredReturnFlights.length === 0 ? (
+                  <div className="empty-box">
+                    Không có chuyến về phù hợp từ {chosenOutbound?.to} về {chosenOutbound?.from}.
+                  </div>
+                ) : (
+                  <div className="flight-grid">
+                    {sortFlights(filteredReturnFlights).map((flight) => renderFlightCard(flight, true))}
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
       </div>
 
       {initialTripType === "roundtrip" && (selectedOutbound || selectedReturn) && (
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: '#fff',
-          padding: '15px 30px',
-          boxShadow: '0 -4px 15px rgba(0,0,0,0.1)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
+        <div className="booking-progress-bar">
           <div>
-            <p style={{ margin: 0, fontWeight: 'bold' }}>Tiến trình Đặt vé Khứ hồi</p>
-            <p style={{ margin: '5px 0 0 0', color: '#666', fontSize: '14px' }}>
-              Chiều đi: {selectedOutbound ? "Đã chọn" : "Chưa chọn"} | Chiều về: {selectedReturn ? "Đã chọn" : "Chưa chọn"}
+            <p className="booking-progress-bar__title">Tiến trình đặt vé khứ hồi</p>
+            <p className="booking-progress-bar__text">
+              Chiều đi: {selectedOutbound ? "Đã chọn" : "Chưa chọn"} | Chiều về:{" "}
+              {selectedReturn ? "Đã chọn" : "Chưa chọn"}
             </p>
           </div>
           <button
-            className="book-btn"
+            className="book-btn booking-progress-bar__button"
             disabled={!selectedOutbound || !selectedReturn}
-            style={{ opacity: (!selectedOutbound || !selectedReturn) ? 0.6 : 1, padding: '12px 30px', fontSize: '16px' }}
             onClick={() => {
               if (selectedOutbound && selectedReturn) {
                 navigate(`/booking/${selectedOutbound}?returnFlightId=${selectedReturn}`);
               }
             }}
           >
-            Đến trang Đặt Vé
+            Đến trang đặt vé
           </button>
         </div>
       )}
